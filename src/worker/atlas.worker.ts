@@ -4,6 +4,8 @@ import { ModelBuilder, type Dataset } from './model';
 import { Checkpoints } from './state';
 import { FileIndex } from './fileIndex';
 import { computeLayout, transferables } from './layout';
+import { buildTimeline } from './timeline';
+import { buildCoChange } from './cochange';
 import type { FromWorker, InputError, Progress, Summary, Tables, ToWorker } from '../lib/protocol';
 
 /**
@@ -25,6 +27,8 @@ export interface Loaded {
   summary: Summary;
 }
 let loaded: Loaded | null = null;
+/** Co-change is expensive and never changes, so it is built once on demand. */
+let cochange: ReturnType<typeof buildCoChange> | null = null;
 
 const post = (m: FromWorker, transfer?: Transferable[]) =>
   (self as unknown as Worker).postMessage(m, transfer ?? []);
@@ -218,6 +222,7 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
   if (msg.type === 'parse') {
     cancelled = false;
     loaded = null;
+    cochange = null;
     void parse(msg);
     return;
   }
@@ -229,6 +234,40 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
     if (!loaded) return;
     const values = loaded.index.sizeHistory(msg.fileId, BINARY_WEIGHT, msg.samples);
     post({ type: 'sparkline', sparkline: { fileId: msg.fileId, values } }, [values.buffer]);
+    return;
+  }
+  if (msg.type === 'timeline') {
+    if (!loaded) return;
+    const t = buildTimeline(loaded.dataset, msg.includeBots);
+    // `times` belongs to the dataset and must not be transferred away.
+    post({ type: 'timeline', timeline: { ...t, times: t.times.slice() } });
+    return;
+  }
+  if (msg.type === 'cochange') {
+    if (!loaded) return;
+    cochange ??= buildCoChange(loaded.dataset, msg.limit);
+    post({
+      type: 'cochange',
+      cochange: {
+        pairs: cochange.pairs.slice(),
+        counts: cochange.counts.slice(),
+        commitsConsidered: cochange.commitsConsidered,
+        maxCount: cochange.maxCount,
+      },
+    });
+    return;
+  }
+  if (msg.type === 'subjects') {
+    if (!loaded) return;
+    const d = loaded.dataset;
+    const from = Math.max(0, Math.min(d.commitCount - 1, msg.from));
+    const to = Math.min(d.commitCount, from + msg.count);
+    const authors = new Uint32Array(to - from);
+    for (let k = from; k < to; k++) authors[k - from] = d.author[k]!;
+    post({
+      type: 'subjects',
+      window: { from, subjects: d.subjects.slice(from, to), authors },
+    });
   }
 };
 

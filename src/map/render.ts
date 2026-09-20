@@ -1,4 +1,4 @@
-import type { LayoutPayload, Tables } from '../lib/protocol';
+import type { CoChangePayload, LayoutPayload, Tables } from '../lib/protocol';
 import {
   activityT,
   ageT,
@@ -47,9 +47,28 @@ export function lerpCamera(a: Camera, b: Camera, t: number): Camera {
   };
 }
 
+/**
+ * One frame's subject: the layout being drawn, and optionally the layout it is
+ * arriving from. Cells present in both slide and resize; cells only in `next`
+ * pop in; cells only in `prev` collapse to a ghost outline.
+ */
+export interface Frame {
+  next: LayoutPayload;
+  prev: LayoutPayload | null;
+  /** For each cell of `next`, its index in `prev`, or -1 when it is new. */
+  prevOfNext: Int32Array | null;
+  /** Indices in `prev` that are gone from `next`. */
+  gone: Int32Array | null;
+  goneCount: number;
+  /** Eased progress, 0 to 1. */
+  e: number;
+}
+
 /** The smallest a cell can get before it is folded into its parent's fill. */
 const MIN_CELL = 0.75;
 const MAX_GLOWS = 200;
+/** Arcs are a garnish; past this many they stop meaning anything. */
+const MAX_ARCS = 45;
 const LABEL_FOLDER_MIN_W = 64;
 const LABEL_FILE_MIN_W = 46;
 const LABEL_FILE_MIN_H = 18;
@@ -86,7 +105,7 @@ export class MapRenderer {
 
   drawBase(
     ctx: CanvasRenderingContext2D,
-    l: LayoutPayload,
+    frame: Frame,
     opts: {
       mode: Mode;
       pal: Palette;
@@ -103,6 +122,9 @@ export class MapRenderer {
   ): void {
     const { pal, camera, mode, tables, from, to } = opts;
     const { k, tx, ty } = camera;
+    const l = frame.next;
+    const moving = frame.prev !== null && frame.e < 1;
+    const e = frame.e;
 
     ctx.globalAlpha = opts.alpha;
 
@@ -120,17 +142,71 @@ export class MapRenderer {
       ctx.fillRect(x0, y0, w, h);
     }
 
+    // Files that have gone: collapse toward their centre and fade to an
+    // outline, so a deletion reads as a departure rather than a blink.
+    if (moving && frame.gone && frame.prev) {
+      const pr = frame.prev.rects;
+      ctx.strokeStyle = pal.ghost;
+      ctx.lineWidth = 1;
+      for (let g = 0; g < frame.goneCount; g++) {
+        const i = frame.gone[g]!;
+        const cx = ((pr[i * 4]! + pr[i * 4 + 2]!) / 2) * k + tx;
+        const cy = ((pr[i * 4 + 1]! + pr[i * 4 + 3]!) / 2) * k + ty;
+        const w = (pr[i * 4 + 2]! - pr[i * 4]!) * k * (1 - e);
+        const h = (pr[i * 4 + 3]! - pr[i * 4 + 1]!) * k * (1 - e);
+        if (w < 1.5 || h < 1.5) continue;
+        ctx.globalAlpha = opts.alpha * (1 - e) * 0.9;
+        ctx.strokeRect(cx - w / 2, cy - h / 2, w, h);
+      }
+      ctx.globalAlpha = opts.alpha;
+    }
+
     const r = l.rects;
+    const pr = frame.prev?.rects;
+    const pon = frame.prevOfNext;
     const n = l.fileIds.length;
     for (let i = 0; i < n; i++) {
-      const x0 = r[i * 4]! * k + tx;
-      const y0 = r[i * 4 + 1]! * k + ty;
-      const w = (r[i * 4 + 2]! - r[i * 4]!) * k;
-      const h = (r[i * 4 + 3]! - r[i * 4 + 1]!) * k;
+      let x0: number;
+      let y0: number;
+      let w: number;
+      let h: number;
+      let fresh = 0;
+
+      const p = moving && pon ? pon[i]! : -1;
+      if (p >= 0 && pr) {
+        // Survivor: slide and resize from where it was.
+        const ax0 = pr[p * 4]! + (r[i * 4]! - pr[p * 4]!) * e;
+        const ay0 = pr[p * 4 + 1]! + (r[i * 4 + 1]! - pr[p * 4 + 1]!) * e;
+        const ax1 = pr[p * 4 + 2]! + (r[i * 4 + 2]! - pr[p * 4 + 2]!) * e;
+        const ay1 = pr[p * 4 + 3]! + (r[i * 4 + 3]! - pr[p * 4 + 3]!) * e;
+        x0 = ax0 * k + tx;
+        y0 = ay0 * k + ty;
+        w = (ax1 - ax0) * k;
+        h = (ay1 - ay0) * k;
+      } else if (moving && pon) {
+        // New file: grow from 0.6 of its size, with a brief flash.
+        const cx = (r[i * 4]! + r[i * 4 + 2]!) / 2;
+        const cy = (r[i * 4 + 1]! + r[i * 4 + 3]!) / 2;
+        const scale = 0.6 + 0.4 * e;
+        const hw = ((r[i * 4 + 2]! - r[i * 4]!) / 2) * scale;
+        const hh = ((r[i * 4 + 3]! - r[i * 4 + 1]!) / 2) * scale;
+        x0 = (cx - hw) * k + tx;
+        y0 = (cy - hh) * k + ty;
+        w = hw * 2 * k;
+        h = hh * 2 * k;
+        fresh = 1 - e;
+      } else {
+        x0 = r[i * 4]! * k + tx;
+        y0 = r[i * 4 + 1]! * k + ty;
+        w = (r[i * 4 + 2]! - r[i * 4]!) * k;
+        h = (r[i * 4 + 3]! - r[i * 4 + 1]!) * k;
+      }
+
       if (w < MIN_CELL || h < MIN_CELL) continue;
       if (x0 > opts.width || y0 > opts.height || x0 + w < 0 || y0 + h < 0) continue;
       ctx.globalAlpha = opts.dimmed && opts.dimmed[i] === 1 ? opts.alpha * 0.18 : opts.alpha;
-      ctx.fillStyle = this.cellColor(l, i, mode, pal, tables, from, to);
+      ctx.fillStyle =
+        fresh > 0.35 ? pal.fresh : this.cellColor(l, i, mode, pal, tables, from, to);
       ctx.fillRect(x0, y0, w, h);
     }
     ctx.globalAlpha = opts.alpha;
@@ -150,12 +226,16 @@ export class MapRenderer {
     }
     ctx.globalAlpha = opts.alpha;
 
-    if (opts.labels) this.drawLabels(ctx, l, tables, pal, camera, opts.width, opts.height, opts.alpha);
+    // Labels ride along with the tween rather than disappearing during
+    // playback, which would leave the map anonymous exactly when it is moving.
+    if (opts.labels) {
+      this.drawLabels(ctx, frame, tables, pal, camera, opts.width, opts.height, opts.alpha);
+    }
   }
 
   private drawLabels(
     ctx: CanvasRenderingContext2D,
-    l: LayoutPayload,
+    frame: Frame,
     tables: Tables,
     pal: Palette,
     camera: Camera,
@@ -164,6 +244,8 @@ export class MapRenderer {
     alpha: number,
   ): void {
     const { k, tx, ty } = camera;
+    const l = frame.next;
+    const moving = frame.prev !== null && frame.e < 1;
     ctx.textBaseline = 'middle';
 
     // Folder names, in the gutter the layout reserved for them.
@@ -187,14 +269,29 @@ export class MapRenderer {
     ctx.fillStyle = pal.label;
     ctx.globalAlpha = alpha * 0.85;
     const r = l.rects;
+    const pr = frame.prev?.rects;
+    const pon = frame.prevOfNext;
+    const e = frame.e;
     for (let i = 0; i < l.fileIds.length; i++) {
-      const w = (r[i * 4 + 2]! - r[i * 4]!) * k;
-      const h = (r[i * 4 + 3]! - r[i * 4 + 1]!) * k;
+      let x0 = r[i * 4]!;
+      let y0 = r[i * 4 + 1]!;
+      let x1 = r[i * 4 + 2]!;
+      let y1 = r[i * 4 + 3]!;
+      if (moving && pon && pr) {
+        const p = pon[i]!;
+        if (p < 0) continue; // a file appearing is too brief to label
+        x0 = pr[p * 4]! + (x0 - pr[p * 4]!) * e;
+        y0 = pr[p * 4 + 1]! + (y0 - pr[p * 4 + 1]!) * e;
+        x1 = pr[p * 4 + 2]! + (x1 - pr[p * 4 + 2]!) * e;
+        y1 = pr[p * 4 + 3]! + (y1 - pr[p * 4 + 3]!) * e;
+      }
+      const w = (x1 - x0) * k;
+      const h = (y1 - y0) * k;
       if (w < LABEL_FILE_MIN_W || h < LABEL_FILE_MIN_H) continue;
-      const x0 = r[i * 4]! * k + tx;
-      const y0 = r[i * 4 + 1]! * k + ty;
-      if (x0 > width || y0 > height || x0 + w < 0 || y0 + h < 0) continue;
-      ctx.fillText(fit(ctx, baseName(tables.paths[l.pathIds[i]!]!), w - 8), x0 + 4, y0 + h / 2);
+      const px = x0 * k + tx;
+      const py = y0 * k + ty;
+      if (px > width || py > height || px + w < 0 || py + h < 0) continue;
+      ctx.fillText(fit(ctx, baseName(tables.paths[l.pathIds[i]!]!), w - 8), px + 4, py + h / 2);
     }
     ctx.globalAlpha = alpha;
   }
@@ -215,6 +312,10 @@ export class MapRenderer {
       selected: number;
       hoverFolder: number;
       glows: boolean;
+      /** Pairs of files that tend to change in the same commit. */
+      cochange: CoChangePayload | null;
+      /** Draw only arcs touching this file id, or -1 for the strongest overall. */
+      arcsFor: number;
     },
   ): void {
     const { pal, camera } = opts;
@@ -222,6 +323,9 @@ export class MapRenderer {
     ctx.clearRect(0, 0, opts.width, opts.height);
 
     if (opts.glows) this.drawGlows(ctx, l, pal, camera, opts.width, opts.height);
+    if (opts.cochange) {
+      this.drawArcs(ctx, l, opts.cochange, opts.arcsFor, pal, camera, opts.width, opts.height);
+    }
 
     const r = l.rects;
     if (opts.hoverFolder >= 0) {
@@ -266,6 +370,85 @@ export class MapRenderer {
       ctx.strokeRect(x - 3.5, y - 3.5, w + 7, h + 7);
     }
   }
+
+  /**
+   * Arcs between files that change together. The centre of each cell is the
+   * anchor and the curve bows away from the midpoint, so two arcs between the
+   * same neighbourhood stay distinguishable.
+   */
+  private drawArcs(
+    ctx: CanvasRenderingContext2D,
+    l: LayoutPayload,
+    co: CoChangePayload,
+    only: number,
+    pal: Palette,
+    camera: Camera,
+    width: number,
+    height: number,
+  ): void {
+    const n = l.fileIds.length;
+    if (this.arcSlot.length < n) this.arcSlot = new Int32Array(Math.max(n, 1024));
+    // fileId -> cell index, rebuilt per draw because the layout changes.
+    const index = this.arcIndex;
+    index.clear();
+    for (let i = 0; i < n; i++) index.set(l.fileIds[i]!, i);
+
+    const { k, tx, ty } = camera;
+    const centreX = (i: number) => ((l.rects[i * 4]! + l.rects[i * 4 + 2]!) / 2) * k + tx;
+    const centreY = (i: number) => ((l.rects[i * 4 + 1]! + l.rects[i * 4 + 3]!) / 2) * k + ty;
+
+    ctx.lineCap = 'round';
+    let drawn = 0;
+    for (let p = 0; p < co.counts.length && drawn < MAX_ARCS; p++) {
+      const a = co.pairs[p * 2]!;
+      const b = co.pairs[p * 2 + 1]!;
+      if (only >= 0 && a !== only && b !== only) continue;
+      const ia = index.get(a);
+      const ib = index.get(b);
+      if (ia === undefined || ib === undefined) continue;
+
+      const x1 = centreX(ia);
+      const y1 = centreY(ia);
+      const x2 = centreX(ib);
+      const y2 = centreY(ib);
+      if (x1 < 0 && x2 < 0) continue;
+      if (x1 > width && x2 > width) continue;
+      if (y1 < 0 && y2 < 0) continue;
+      if (y1 > height && y2 > height) continue;
+
+      const strength = co.counts[p]! / Math.max(1, co.maxCount);
+      const mx = (x1 + x2) / 2;
+      const my = (y1 + y2) / 2;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy) || 1;
+      // Bow perpendicular to the chord, by a fifth of its length.
+      const cx = mx - (dy / len) * len * 0.2;
+      const cy = my + (dx / len) * len * 0.2;
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo(cx, cy, x2, y2);
+      ctx.strokeStyle = pal.arc;
+      // Weak pairs stay whisper-faint so the strong ones carry the picture.
+      ctx.globalAlpha = 0.1 + strength * strength * 0.7;
+      ctx.lineWidth = 0.6 + strength * 2.6;
+      ctx.stroke();
+
+      // Endpoint dots, so a connection is readable even where it leaves frame.
+      ctx.globalAlpha = 0.25 + strength * 0.6;
+      ctx.fillStyle = pal.arc;
+      ctx.beginPath();
+      ctx.arc(x1, y1, 1.8, 0, Math.PI * 2);
+      ctx.arc(x2, y2, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      drawn++;
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  private arcIndex = new Map<number, number>();
+  private arcSlot = new Int32Array(0);
 
   private drawGlows(
     ctx: CanvasRenderingContext2D,

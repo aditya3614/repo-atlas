@@ -3,7 +3,7 @@
 .main {
   height: 100vh;
   display: grid;
-  grid-template-rows: 76px auto 1fr auto;
+  grid-template-rows: 76px auto minmax(0, 1fr) var(--dock-h) auto;
   background: var(--bg);
   overflow: hidden;
 }
@@ -132,4 +132,125 @@
   .main-body { grid-template-columns: 1fr; }
   .map-column { min-height: 60vh; }
   .panel-col { border-left: 0; border-top: 1px solid var(--hairline); }
+}
+
+
+/* ---- bottom dock: transport plus the streamgraph scrubber ---- */
+.dock {
+  border-top: 1px solid var(--hairline);
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr);
+  background: var(--bg);
+  min-height: 0;
+}
+
+.dock-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  padding: 0 var(--s-7);
+}
+
+.transport { display: flex; align-items: center; gap: 6px; }
+.tbtn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.tbtn:hover { color: var(--text); background: var(--accent-soft); border-color: var(--accent); }
+.tbtn-main {
+  width: 34px;
+  height: 34px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+.tbtn-main:hover { background: var(--accent); color: var(--accent-ink); }
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.toggle input { accent-color: var(--accent); width: 14px; height: 14px; }
+.toggle-note { color: var(--text-faint); }
+
+.now { margin-left: auto; display: flex; align-items: baseline; gap: var(--s-3); }
+.now-date { font-size: 14px; font-weight: 600; color: var(--text); }
+.now-commit { color: var(--text-faint); }
+
+/* ---- streamgraph ---- */
+.stream { position: relative; min-height: 0; padding: 0 var(--s-7) var(--s-2); }
+.stream-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: ew-resize;
+  border-radius: var(--r-xs);
+  touch-action: none;
+}
+.stream-empty { display: grid; place-items: center; color: var(--text-faint); }
+.stream-tip {
+  position: absolute;
+  top: -2px;
+  left: var(--s-7);
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  color: var(--text);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease);
+  white-space: nowrap;
+}
+:root[data-theme='paper'] .stream-tip { background: #fff; }
+
+/* ---- commit ticker over the map ---- */
+.ticker {
+  position: absolute;
+  left: var(--s-4);
+  bottom: var(--s-4);
+  display: grid;
+  gap: 3px;
+  pointer-events: none;
+  max-width: 60%;
+}
+.ticker-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--hairline-strong);
+  width: fit-content;
+  max-width: 100%;
+}
+.ticker-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ticker-who { color: var(--text-muted); white-space: nowrap; }
+.ticker-what { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.arc-toggle.is-on { background: var(--accent-soft); color: var(--text); }
+
+@media (max-width: 1320px) {
+  .dock-controls { gap: var(--s-4); padding-inline: var(--s-4); }
+  .stream { padding-inline: var(--s-4); }
+}
+@media (max-width: 900px) {
+  .main { grid-template-rows: auto auto 1fr auto auto; }
+  .dock-controls { flex-wrap: wrap; height: auto; padding-block: var(--s-2); }
 }

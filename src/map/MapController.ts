@@ -1,6 +1,8 @@
 import type { LayoutPayload, Tables } from '../lib/protocol';
 import { HitGrid, toLayout } from './hit';
-import { MapRenderer, IDENTITY, cameraForRect, lerpCamera, type Camera } from './render';
+import { MapRenderer, IDENTITY, cameraForRect, lerpCamera, type Camera, type Frame } from './render';
+import { advance, clock, notifyClock } from './clock';
+import type { CoChangePayload } from '../lib/protocol';
 import type { Mode, Palette } from './colors';
 
 /**
@@ -16,10 +18,17 @@ export interface MapCallbacks {
   onHoverFolder: (index: number) => void;
   onSelect: (index: number) => void;
   onDrill: (path: string) => void;
+  /** Asks for the layout at a commit; the reply comes back via setLayout. */
+  onNeedLayout: (commit: number) => void;
 }
 
 const ZOOM_MS = 380;
 const EASE = (t: number) => 1 - Math.pow(1 - t, 3);
+/** Bounds on how long a map-to-map transition runs. */
+const TWEEN_MIN = 90;
+const TWEEN_MAX = 420;
+/** React is told the time at this rate; the map still moves every frame. */
+const UI_NOTIFY_MS = 90;
 
 export class MapController {
   private base: HTMLCanvasElement | null = null;
@@ -40,6 +49,26 @@ export class MapController {
   hover = -1;
   hoverFolder = -1;
   selected = -1;
+  selectedFile = -1;
+
+  /** Cell-to-cell transition between two layouts. */
+  private tween: {
+    prev: LayoutPayload;
+    prevOfNext: Int32Array;
+    gone: Int32Array;
+    goneCount: number;
+    start: number;
+    dur: number;
+  } | null = null;
+  /** fileId -> index in the previous layout; sized to the file count. */
+  private slot = new Int32Array(0);
+  private lastLayoutAt = 0;
+  private layoutInFlight = false;
+  private requestedCommit = -1;
+  private lastNotify = 0;
+
+  cochange: CoChangePayload | null = null;
+  showArcs = false;
 
   private width = 1;
   private height = 1;
@@ -124,10 +153,19 @@ export class MapController {
   setLayout(next: LayoutPayload, zoomFrom?: { rect: [number, number, number, number]; into: boolean }): void {
     const prev = this.layout;
     this.layout = next;
+    this.layoutInFlight = false;
     if (this.grid) this.grid.rebuild(next);
     else this.grid = new HitGrid(next);
     this.hover = -1;
     this.hoverFolder = -1;
+
+    // Same root, different commit: tween cell to cell rather than cutting.
+    if (prev && !zoomFrom && prev.root === next.root && !this.reducedMotion && !clock.scrubbing) {
+      this.buildTween(prev, next);
+    } else {
+      this.tween = null;
+    }
+    this.lastLayoutAt = performance.now();
 
     if (prev && zoomFrom && !this.reducedMotion) {
       const [x0, y0, x1, y1] = zoomFrom.rect;
@@ -141,6 +179,41 @@ export class MapController {
     }
     this.invalidate(true);
   }
+
+  /**
+   * Pair up the cells of two layouts by file id. A file that survives slides
+   * from where it was; one that is new pops in; one that has gone collapses.
+   */
+  private buildTween(prev: LayoutPayload, next: LayoutPayload): void {
+    const fileCount = this.fileCount;
+    if (this.slot.length < fileCount) this.slot = new Int32Array(fileCount);
+    const slot = this.slot;
+    slot.fill(-1, 0, fileCount);
+
+    for (let i = 0; i < prev.fileIds.length; i++) slot[prev.fileIds[i]!] = i;
+
+    const prevOfNext = new Int32Array(next.fileIds.length);
+    for (let i = 0; i < next.fileIds.length; i++) {
+      const f = next.fileIds[i]!;
+      const p = slot[f]!;
+      prevOfNext[i] = p;
+      if (p >= 0) slot[f] = -2; // seen, so it is not counted as gone
+    }
+
+    const gone = new Int32Array(prev.fileIds.length);
+    let goneCount = 0;
+    for (let i = 0; i < prev.fileIds.length; i++) {
+      if (slot[prev.fileIds[i]!]! >= 0) gone[goneCount++] = i;
+    }
+
+    // Match the tween to how often layouts are actually arriving, so motion is
+    // continuous during playback instead of a series of little jumps.
+    const since = performance.now() - this.lastLayoutAt;
+    const dur = Math.max(TWEEN_MIN, Math.min(TWEEN_MAX, since || TWEEN_MAX));
+    this.tween = { prev, prevOfNext, gone, goneCount, start: performance.now(), dur };
+  }
+
+  fileCount = 0;
 
   invalidate(base = false): void {
     if (base) this.baseDirty = true;
@@ -161,7 +234,33 @@ export class MapController {
     const octx = this.overlayCtx;
     if (!l || !ctx || !octx || !this.pal || !this.tables) return;
 
-    let animating = false;
+    // --- playback ---
+    let playing = false;
+    if (clock.playing) {
+      playing = true;
+      const dt = this.lastFrameAt === 0 ? 16 : Math.min(64, now - this.lastFrameAt);
+      advance(dt);
+      if (now - this.lastNotify > UI_NOTIFY_MS) {
+        this.lastNotify = now;
+        notifyClock();
+      }
+    }
+    this.lastFrameAt = now;
+
+    // Ask for the next layout when the commit has moved on and the worker is
+    // free. One request in flight at a time keeps the queue from backing up.
+    if (
+      (playing || clock.scrubbing) &&
+      !this.layoutInFlight &&
+      clock.commit !== this.requestedCommit &&
+      clock.commit !== l.commit
+    ) {
+      this.layoutInFlight = true;
+      this.requestedCommit = clock.commit;
+      this.cb.onNeedLayout(clock.commit);
+    }
+
+    let animating = playing;
     let camera: Camera = IDENTITY;
 
     if (this.zoom) {
@@ -179,6 +278,16 @@ export class MapController {
       octx.clearRect(0, 0, this.width, this.height);
       if (!animating) this.zoom = null;
       this.baseDirty = !animating;
+    } else if (this.tween) {
+      const p = Math.min(1, (now - this.tween.start) / this.tween.dur);
+      const e = EASE(p);
+      if (p >= 1) this.tween = null;
+      else animating = true;
+      ctx.fillStyle = this.pal.void;
+      ctx.fillRect(0, 0, this.width, this.height);
+      this.drawBase(ctx, l, IDENTITY, 1, true, e);
+      this.baseDirty = false;
+      this.overlayDirty = true;
     } else if (this.baseDirty) {
       ctx.fillStyle = this.pal.void;
       ctx.fillRect(0, 0, this.width, this.height);
@@ -197,6 +306,8 @@ export class MapController {
         selected: this.selected,
         hoverFolder: this.hoverFolder,
         glows: this.mode === 'activity',
+        cochange: this.showArcs || this.selectedFile >= 0 ? this.cochange : null,
+        arcsFor: this.showArcs ? -1 : this.selectedFile,
       });
       this.overlayDirty = false;
     }
@@ -204,14 +315,28 @@ export class MapController {
     if (animating) this.schedule();
   };
 
+  private lastFrameAt = 0;
+
   private drawBase(
     ctx: CanvasRenderingContext2D,
     l: LayoutPayload,
     camera: Camera,
     alpha: number,
     labels: boolean,
+    e = 1,
   ): void {
-    this.renderer.drawBase(ctx, l, {
+    const frame: Frame =
+      this.tween && e < 1
+        ? {
+            next: l,
+            prev: this.tween.prev,
+            prevOfNext: this.tween.prevOfNext,
+            gone: this.tween.gone,
+            goneCount: this.tween.goneCount,
+            e,
+          }
+        : { next: l, prev: null, prevOfNext: null, gone: null, goneCount: 0, e: 1 };
+    this.renderer.drawBase(ctx, frame, {
       mode: this.mode,
       pal: this.pal!,
       tables: this.tables!,

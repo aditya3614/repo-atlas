@@ -3,11 +3,13 @@ import { MapController } from '../map/MapController';
 import { readPalette, type Mode, type Palette } from '../map/colors';
 import { baseName } from '../map/render';
 import { useMap } from '../store/map';
+import { clock, subscribeClock } from '../map/clock';
 import { useUi } from '../store/ui';
 import { atlasWorker } from '../lib/atlasClient';
 import { usePrefersReducedMotion } from '../lib/motion';
 import type { FromWorker, LayoutPayload, Summary } from '../lib/protocol';
 import { Tooltip, type TooltipData } from './Tooltip';
+import { Ticker } from './Ticker';
 import '../styles/map.css';
 
 /**
@@ -25,6 +27,9 @@ export function MapView({ summary }: { summary: Summary }) {
   const weighting = useMap((s) => s.weighting);
   const root = useMap((s) => s.root);
   const tables = useMap((s) => s.tables);
+  const showArcs = useMap((s) => s.showArcs);
+  const cochange = useMap((s) => s.cochange);
+  const selectedFile = useMap((s) => s.selectedFile);
 
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const [pal, setPal] = useState<Palette | null>(null);
@@ -32,6 +37,8 @@ export function MapView({ summary }: { summary: Summary }) {
   /** Layout requests are numbered so a stale reply can be dropped. */
   const reqId = useRef(0);
   const pendingZoom = useRef<{ rect: [number, number, number, number]; into: boolean } | null>(null);
+  const size = useRef({ w: 0, h: 0 });
+  const requestRef = useRef<(commit: number) => void>(() => undefined);
 
   const controller = useMemo(
     () =>
@@ -58,6 +65,7 @@ export function MapView({ summary }: { summary: Summary }) {
           const l = controllerRef.current?.currentLayout();
           useMap.getState().setSelectedFile(index >= 0 && l ? l.fileIds[index]! : -1);
         },
+        onNeedLayout: (commit) => requestRef.current(commit),
         onDrill: (path) => {
           const rect = controllerRef.current?.folderRect(path);
           if (rect) pendingZoom.current = { rect, into: true };
@@ -69,28 +77,33 @@ export function MapView({ summary }: { summary: Summary }) {
   const controllerRef = useRef(controller);
 
   // ---- worker layout requests ----
-  const request = useCallback(
-    (width: number, height: number) => {
-      if (width < 2 || height < 2) return;
-      reqId.current += 1;
-      atlasWorker().postMessage({
-        type: 'layout',
-        request: {
-          id: reqId.current,
-          commit: summary.commits - 1,
-          width,
-          height,
-          root: useMap.getState().root,
-          weighting: useMap.getState().weighting,
-        },
-      });
-    },
-    [summary.commits],
-  );
+  const request = useCallback((commit: number) => {
+    const { w, h } = size.current;
+    if (w < 2 || h < 2) return;
+    reqId.current += 1;
+    atlasWorker().postMessage({
+      type: 'layout',
+      request: {
+        id: reqId.current,
+        commit,
+        width: w,
+        height: h,
+        root: useMap.getState().root,
+        weighting: useMap.getState().weighting,
+      },
+    });
+  }, []);
+  requestRef.current = request;
 
   useEffect(() => {
     const w = atlasWorker();
     const onMessage = (e: MessageEvent<FromWorker>) => {
+      if (e.data.type === 'cochange') {
+        controllerRef.current.cochange = e.data.cochange;
+        useMap.getState().setCoChange(e.data.cochange);
+        controllerRef.current.invalidate();
+        return;
+      }
       if (e.data.type !== 'layout') return;
       const layout: LayoutPayload = e.data.layout;
       if (layout.id !== reqId.current) return; // a newer request is already out
@@ -127,6 +140,8 @@ export function MapView({ summary }: { summary: Summary }) {
     c.reducedMotion = reduced;
     c.setTimeRange(summary.firstTime, summary.lastTime);
 
+    c.fileCount = summary.files;
+
     let lastW = 0;
     let lastH = 0;
     const ro = new ResizeObserver(() => {
@@ -135,8 +150,9 @@ export function MapView({ summary }: { summary: Summary }) {
       if (w === lastW && h === lastH) return;
       lastW = w;
       lastH = h;
+      size.current = { w, h };
       c.resize(w, h, Math.min(window.devicePixelRatio || 1, 2));
-      request(w, h);
+      request(clock.commit);
     });
     ro.observe(wrap);
 
@@ -144,7 +160,7 @@ export function MapView({ summary }: { summary: Summary }) {
       ro.disconnect();
       c.detach();
     };
-  }, [reduced, request, summary.firstTime, summary.lastTime]);
+  }, [reduced, request, summary.files, summary.firstTime, summary.lastTime]);
 
   useEffect(() => {
     const p = readPalette(document.documentElement);
@@ -160,11 +176,43 @@ export function MapView({ summary }: { summary: Summary }) {
     controllerRef.current.setMode(mode);
   }, [mode]);
 
-  // A new root or weighting needs a fresh layout at the current size.
+  // A new root or weighting needs a fresh layout at the current commit.
   useEffect(() => {
-    const wrap = wrapRef.current;
-    if (wrap) request(Math.floor(wrap.clientWidth), Math.floor(wrap.clientHeight));
+    request(clock.commit);
   }, [root, weighting, request]);
+
+  /*
+   * Whenever the clock settles somewhere new — the timeline finishing, a step,
+   * Home/End, a seek — ask for that commit's layout. While playing, the
+   * controller drives the requests itself from inside the frame loop.
+   */
+  useEffect(
+    () =>
+      subscribeClock(() => {
+        // The loop halts whenever the map is still, so pressing play has to
+        // wake it; from then on it keeps itself scheduled.
+        if (clock.playing) {
+          controllerRef.current.invalidate();
+          return;
+        }
+        if (clock.scrubbing) return;
+        const current = controllerRef.current.currentLayout();
+        if (current && current.commit === clock.commit) return;
+        request(clock.commit);
+      }),
+    [request],
+  );
+
+  // Arcs and selection drive the overlay, not the layout.
+  useEffect(() => {
+    const c = controllerRef.current;
+    c.showArcs = showArcs;
+    c.selectedFile = selectedFile;
+    c.invalidate();
+    if ((showArcs || selectedFile >= 0) && !c.cochange) {
+      atlasWorker().postMessage({ type: 'cochange', limit: 400 });
+    }
+  }, [showArcs, selectedFile]);
 
   // ---- pointer ----
   const onMove = useCallback((e: React.PointerEvent) => {
@@ -194,14 +242,24 @@ export function MapView({ summary }: { summary: Summary }) {
         }}
         onClick={() => controllerRef.current.click()}
       />
+      {tables && pal && <Ticker tables={tables} pal={pal} />}
       {tooltip && pal && <Tooltip data={tooltip} />}
-      {layout && layout.hiddenCount > 0 && (
-        <p className="map-note tiny">
-          {layout.hiddenCount.toLocaleString()} file
-          {layout.hiddenCount === 1 ? '' : 's'} too small to draw at this size — zoom into a folder
-          to see them.
-        </p>
-      )}
+      <div className="map-notes">
+        {showArcs && cochange && (
+          <p className="map-note tiny">
+            Arcs join files changed in the same commit — thicker means more often. From{' '}
+            {cochange.commitsConsidered.toLocaleString()} commits that touched between 2 and 20
+            files; the strongest {Math.min(45, cochange.counts.length)} pairs are drawn.
+          </p>
+        )}
+        {layout && layout.hiddenCount > 0 && (
+          <p className="map-note tiny">
+            {layout.hiddenCount.toLocaleString()} file
+            {layout.hiddenCount === 1 ? '' : 's'} too small to draw at this size — zoom into a
+            folder to see them.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

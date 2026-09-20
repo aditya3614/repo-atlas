@@ -102,6 +102,35 @@ export interface Tables {
   maxChurn: number;
 }
 
+export interface TimelinePayload {
+  times: Float64Array;
+  cumReal: Float64Array;
+  cumSkip: Float64Array;
+  totalReal: number;
+  totalSkip: number;
+  quietCap: number;
+  quietGaps: number;
+  weekStart: number;
+  weeks: number;
+  series: Uint32Array;
+  seriesAuthors: Int32Array;
+  peakWeek: number;
+}
+
+export interface CoChangePayload {
+  pairs: Uint32Array;
+  counts: Uint32Array;
+  commitsConsidered: number;
+  maxCount: number;
+}
+
+/** Commit subjects for the ticker, fetched a window at a time. */
+export interface SubjectWindow {
+  from: number;
+  subjects: string[];
+  authors: Uint32Array;
+}
+
 export interface Sparkline {
   fileId: number;
   values: Float32Array;
@@ -111,7 +140,10 @@ export type ToWorker =
   | { type: 'parse'; blob: Blob; repo: string; gzip: boolean; attribution?: Summary['attribution'] }
   | { type: 'cancel' }
   | { type: 'layout'; request: LayoutRequest }
-  | { type: 'sparkline'; fileId: number; samples: number };
+  | { type: 'sparkline'; fileId: number; samples: number }
+  | { type: 'timeline'; includeBots: boolean }
+  | { type: 'cochange'; limit: number }
+  | { type: 'subjects'; from: number; count: number };
 
 export type FromWorker =
   | { type: 'progress'; progress: Progress }
@@ -119,4 +151,7 @@ export type FromWorker =
   | { type: 'error'; error: InputError }
   | { type: 'cancelled' }
   | { type: 'layout'; layout: LayoutPayload }
-  | { type: 'sparkline'; sparkline: Sparkline };
+  | { type: 'sparkline'; sparkline: Sparkline }
+  | { type: 'timeline'; timeline: TimelinePayload }
+  | { type: 'cochange'; cochange: CoChangePayload }
+  | { type: 'subjects'; window: SubjectWindow };

@@ -19,7 +19,11 @@ counts, never file contents.
 - **M2 — the map: done.** Treemap layout in the worker, canvas renderer, five
   colour modes with legends, hover, selection, and drill-down zoom with a
   breadcrumb, at the latest commit.
-- M3 time · M4 meaning · M5 finish: to come.
+- **M3 — time: done.** Streamgraph scrubber, playback with speed and
+  quiet-period skipping, animated transitions for files appearing, moving and
+  disappearing, the commit ticker, and the keyboard transport. Co-change arcs
+  came forward from the stretch list on request.
+- M4 meaning · M5 finish: to come.
 
 ## Running it
 
@@ -81,6 +85,14 @@ Drawing is two canvases: cells and folder borders on the base, hover, selection
 and glows on the overlay. Colours come from 64-entry lookup tables rebuilt only
 when the theme changes, so a frame does no interpolation and no allocation.
 
+Playback keeps its position, speed and commit index in a plain mutable object
+that the frame loop reads directly. React subscribes to it separately and is
+told at about eleven times a second — enough for a date readout, far too slow
+to drive a map. Layouts are requested one at a time as the commit advances, and
+the main thread tweens cell to cell between them: a file that survives slides
+and resizes, one that is new grows in with a flash, one that has gone collapses
+to an outline.
+
 ### Measured, on this machine (M-series MacBook Air, Chromium 1243)
 
 | | |
@@ -95,6 +107,8 @@ when the theme changes, so a frame does no interpolation and no allocation.
 | Hover across a 22k-cell map | 16.7 ms median and p95, worst 16.8 ms |
 | Switching colour mode (full redraw of every cell) | 16.7 ms median and p95 |
 | The same at retina density, four times the pixels | 16.7 ms median and p95 |
+| Playing the synthetic history at 4x | 16.7 ms median and p95, worst 16.8 ms |
+| Dragging the playhead across the whole timeline | 16.7 ms median and p95 |
 
 The footprint is computed from the typed arrays' actual `byteLength` plus a
 two-bytes-per-character estimate for the string tables. It is reported rather
@@ -156,6 +170,17 @@ directions. Recorded here as they are made.
 - **Drilling into a folder is also reachable from the keyboard.** On the canvas
   you click a folder's label strip, which nothing can tab to, so the Selection
   panel renders the file's folder path as buttons that do the same thing.
+- **The streamgraph's wiggle baseline is de-drifted.** `stackOffsetWiggle`
+  minimises slope changes but its baseline random-walks: over 632 weeks of the
+  demo it wandered 224 units while the ribbon was only 29 thick, so fitting the
+  whole range left a thread on an empty canvas. A heavily smoothed centre is
+  subtracted per column, which removes the long-range drift and keeps the local
+  wiggle the brief asks for.
+- **Co-change ignores sweeping commits.** Counting every pair in every commit is
+  quadratic in the commit's size, and a 400-file refactor would contribute
+  80,000 pairs that mean nothing more than "these all moved at once". Only
+  commits touching between 2 and 20 files are counted, over the 600 busiest
+  files, and the caption states how many commits that was.
 - **`heatAt` and `lastTouch` are one field.** Both are only ever written at a
   touch, with the same value, so the model keeps one and saves 8 bytes per file
   per checkpoint.

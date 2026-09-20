@@ -57,6 +57,11 @@ export interface Palette {
   /** Additive glow only works on a dark ground; Paper outlines instead. */
   dark: boolean;
   hot: string;
+  /** Flash on a file's first appearance. */
+  fresh: string;
+  /** Outline a deleted file leaves behind. */
+  ghost: string;
+  arc: string;
 }
 
 export function readPalette(el: HTMLElement): Palette {
@@ -89,6 +94,9 @@ export function readPalette(el: HTMLElement): Palette {
     glow: v('--accent'),
     dark: (el.dataset.theme ?? 'night') !== 'paper',
     hot: v('--heat-4'),
+    fresh: v('--accent'),
+    ghost: v('--danger'),
+    arc: v('--info'),
   };
 }
 

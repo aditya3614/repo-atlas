@@ -16,16 +16,25 @@
 
 .map-overlay { cursor: crosshair; }
 
-.map-note {
+.map-notes {
   position: absolute;
   right: var(--s-4);
   bottom: var(--s-3);
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  max-width: 46%;
+  pointer-events: none;
+}
+.map-note {
   margin: 0;
+  text-align: right;
   color: var(--text-faint);
   background: color-mix(in srgb, var(--bg) 78%, transparent);
   padding: 4px 10px;
-  border-radius: var(--r-pill);
-  pointer-events: none;
+  border-radius: var(--r-md);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--hairline);
 }
 
 /* ---- legend under the map ---- */

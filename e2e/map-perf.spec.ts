@@ -131,3 +131,53 @@ test('the 20k-file map holds up at retina pixel density', async ({ browser }) =>
   expect(stats.p95).toBeLessThan(17);
   await ctx.close();
 });
+
+test('playback and scrubbing hold 60fps on the synthetic history', async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors: string[] = [];
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  page.on('pageerror', (e) => errors.push(e.message));
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Use your repo' }).click();
+  await page.setInputFiles('#atlas-file', SYNTH);
+  await expect(page.locator('.stream-canvas')).toBeVisible({ timeout: 60_000 });
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: 'shots/dock-synthetic-1440x900.png' });
+
+  // --- playback, from the start, at 4x: the heaviest case ---
+  await page.keyboard.press('Home');
+  await page.keyboard.press(']');
+  await page.keyboard.press(']');
+  await page.waitForTimeout(400);
+  await recordFrames(page, 6000);
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(6200);
+  const play = await frameStats(page);
+  const advanced = await page.locator('.now-commit').innerText();
+  await page.keyboard.press('Space');
+
+  // --- scrubbing: drag the playhead across the whole timeline ---
+  const box = (await page.locator('.stream-canvas').boundingBox())!;
+  await page.mouse.move(box.x + 4, box.y + box.height / 2);
+  await page.mouse.down();
+  await recordFrames(page, 3000);
+  for (let i = 1; i <= 60; i++) {
+    await page.mouse.move(box.x + (box.width * i) / 60, box.y + box.height / 2);
+  }
+  await page.waitForTimeout(500);
+  const scrub = await frameStats(page);
+  await page.mouse.up();
+
+  console.log(
+    `playback 4x: median ${play.median.toFixed(1)}ms p95 ${play.p95.toFixed(1)}ms ` +
+      `worst ${play.worst.toFixed(1)}ms (${advanced.trim()})\n` +
+      `scrub: median ${scrub.median.toFixed(1)}ms p95 ${scrub.p95.toFixed(1)}ms ` +
+      `worst ${scrub.worst.toFixed(1)}ms`,
+  );
+
+  expect(play.p95, 'playback must hold 60fps').toBeLessThan(17);
+  expect(scrub.p95, 'scrubbing must hold 60fps').toBeLessThan(17);
+  expect(errors, errors.join(' | ')).toEqual([]);
+});
