@@ -647,72 +647,8 @@ current moment in the history.
 
 ---
 
-## Speed
 
-Measured on an M-series MacBook Air in Chromium, against a generated test
-project of **100,000 commits, 22,512 files and 915,810 file changes** (47 MB).
 
-| | Result | Budget |
-| --- | --- | --- |
-| Reading and indexing the whole history | **285–306 ms** | under 10 s |
-| Click to first map, demo project | **171 ms** | under 2 s |
-| Click to first map, 47 MB test project | **398 ms** | — |
-| Building one map layout of 22,302 cells | **18 ms** | — |
-| Moving the pointer across the map | **16.7 ms** median and 95th percentile | 16.7 ms = 60fps |
-| Switching colour mode (repaints every cell) | **16.7 ms** median and 95th percentile | 60fps |
-| The same on a retina display, four times the pixels | **16.7 ms** | 60fps |
-| Playing the history at 4× | **16.7 ms** median and 95th percentile | 60fps |
-| Dragging the playhead across the whole timeline | **16.7 ms** median and 95th percentile | 60fps |
-| Memory held by the indexed history | **77 MB** | under 500 MB |
-
-No dropped frames in any of these. The memory figure is computed from the actual
-byte lengths of the arrays, because the browser's own memory reading cannot see
-inside a worker, where the data lives.
-
----
-
-## Running and testing it
-
-```bash
-npm install
-npm run dev        # development server at http://localhost:5173
-npm run build      # type-check and build for production
-npm test           # 104 unit tests (vitest)
-npm run e2e        # 36 browser tests and screenshots (Playwright)
-```
-
-`npm run e2e` builds and serves the app first. Screenshots land in `shots/`.
-Set `PW_SYSTEM_CHROME=1` to use the Chrome already on your machine.
-
-To create a large synthetic project for the performance tests:
-
-```bash
-node scripts/make-synthetic.mjs --commits=100000 --files=20000 .cache/synthetic.txt
-```
-
-It is seeded, so the same arguments always produce byte-identical output. It
-deliberately includes bursts of activity, a long silence, renames, folder-wide
-restructures, deletions, automated bot commits, rebased timestamps, and one
-folder with a single owner.
-
-### What the tests cover
-
-- **Parsing**: every rename shape, binary files, non-English paths, empty
-  commits, malformed input with line numbers, chunk-boundary splits, CRLF and
-  byte-order marks.
-- **Identity**: a file keeps one identity across a chain of renames.
-- **Checkpoints**: restored state equals a full replay, at forty random commits.
-- **Heat, bus factor, hotspot ranking, story-fact generation, search.**
-- **Layout**: cells never overlap, order does not change when a file grows,
-  drilling into a folder excludes everything else.
-- **Contrast**: every text-on-background pairing in both themes reaches 4.5:1.
-- **Against real data**: the demo's commit count, contributor count, bot count
-  and live file set are compared to what git reports.
-- **In the browser**: loading, playing, scrubbing, selecting, drilling, search,
-  colour modes, themes, reduced motion, cancelling a load, no console errors,
-  and no requests leaving the page.
-
----
 
 ## Where things live in the code
 
@@ -766,19 +702,6 @@ people who cannot use the canvas, and an in-app help sheet.
 - The map is designed for a desktop-sized screen; below 900 pixels wide it falls
   back to a simplified stacked layout.
 
-**Choices worth knowing about:**
-
-- **Colours and type follow the Wise design system** rather than the original
-  brief's palette, at the project owner's request. Night remains the default
-  because heat glows read better on a dark background.
-- **Wise Sans is not distributable**, so display text uses Inter at its heaviest
-  weight.
-- **The demo ships as plain text, not compressed.** Web servers add their own
-  compression to `.gz` files and browsers silently undo it, at which point the
-  app's own decompression is handed plain text and fails. The compressed path
-  still exists for `.gz` files you drop yourself.
-- **Connection arcs** were originally a stretch goal, brought forward on
-  request.
 
 ---
 
