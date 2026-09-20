@@ -37,7 +37,7 @@ test('error state renders with a line number', async ({ page }) => {
   await page.screenshot({ path: 'shots/error-night-1440x900.png' });
 });
 
-test('no network requests after load', async ({ page }) => {
+test('nothing is sent anywhere after load', async ({ page }) => {
   const errors: string[] = [];
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(m.text());
@@ -45,21 +45,44 @@ test('no network requests after load', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('networkidle');
 
-  // Principle 1 allows self-hosted font files and nothing else.
   const origin = new URL(page.url()).origin;
-  const late: string[] = [];
+  const offsite: string[] = [];
+  const local: string[] = [];
   page.on('request', (r) => {
     const url = r.url();
-    const sameOriginFont = url.startsWith(origin) && /\.woff2?(\?|$)/.test(url);
-    if (!sameOriginFont) late.push(url);
+    if (url.startsWith(origin)) local.push(new URL(url).pathname);
+    else offsite.push(url);
+    // Nothing may ever leave the tab, whatever the origin.
+    expect(['GET'], `${r.method()} ${url}`).toContain(r.method());
   });
+
   await page.getByRole('button', { name: 'Use your repo' }).click();
   await page.getByRole('button', { name: 'Copy' }).click();
-  await page.waitForTimeout(1500);
+  await page.getByRole('button', { name: 'Try the demo' }).click();
+  await expect(page.getByText('The history, read and indexed')).toBeVisible({ timeout: 15_000 });
+  await page.waitForTimeout(1000);
 
-  expect(late, `unexpected requests: ${late.join(', ')}`).toEqual([]);
+  // Third-party requests are forbidden outright. Same-origin requests are
+  // allowed only for the app's own static files: fonts, chunks, demo data.
+  expect(offsite, `third-party requests: ${offsite.join(', ')}`).toEqual([]);
+  const unexpected = local.filter((p) => !/\.(woff2?|js|css|txt)$/.test(p));
+  expect(unexpected, `unexpected same-origin requests: ${unexpected.join(', ')}`).toEqual([]);
   expect(errors, `console errors: ${errors.join(' | ')}`).toEqual([]);
 });
+
+for (const theme of THEMES) {
+  for (const size of SIZES) {
+    test(`overview ${theme} ${size.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: size.width, height: size.height });
+      await page.addInitScript((t) => localStorage.setItem('atlas.theme', t), theme);
+      await page.goto('/');
+      await page.getByRole('button', { name: 'Try the demo' }).click();
+      await expect(page.getByText('The history, read and indexed')).toBeVisible({ timeout: 15_000 });
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: `shots/overview-${theme}-${size.name}.png` });
+    });
+  }
+}
 
 test('reduced motion: the ambient map is static', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });

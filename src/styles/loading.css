@@ -1,0 +1,52 @@
+.loading {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  padding: var(--s-6);
+}
+
+.loading-box {
+  width: min(560px, 100%);
+  display: grid;
+  gap: var(--s-4);
+}
+
+.loading-brand { color: var(--text); margin-bottom: var(--s-5); display: flex; align-items: center; gap: var(--s-3); }
+.loading-brand .brand-name { font-size: 15px; font-weight: 700; }
+
+.loading-kicker { margin: 0; text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; }
+
+.loading-counts {
+  font-size: 22px;
+  line-height: 30px;
+  color: var(--text);
+  margin: 0;
+}
+
+.bar {
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+:root[data-theme='paper'] .bar { background: var(--surface-3); }
+
+.bar-fill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: var(--accent);
+  border-radius: var(--r-pill);
+  transition: transform 160ms linear;
+}
+
+.loading-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  color: var(--text-faint);
+}

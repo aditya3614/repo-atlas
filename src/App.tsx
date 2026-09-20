@@ -1,13 +1,18 @@
+import { AnimatePresence } from 'framer-motion';
 import { Landing } from './screens/Landing';
+import { Loading } from './screens/Loading';
+import { Overview } from './screens/Overview';
 import { Toasts } from './components/Toasts';
-import { useUi } from './store/ui';
+import { useAtlas } from './store/atlas';
 
 export default function App() {
-  const screen = useUi((s) => s.screen);
+  const status = useAtlas((s) => s.status);
+  const reset = useAtlas((s) => s.reset);
 
   return (
     <>
-      {screen === 'landing' && <Landing />}
+      {status === 'ready' ? <Overview /> : <Landing />}
+      <AnimatePresence>{status === 'loading' && <Loading onCancel={reset} />}</AnimatePresence>
       <Toasts />
     </>
   );

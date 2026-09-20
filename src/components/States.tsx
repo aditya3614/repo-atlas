@@ -1,13 +1,5 @@
 import type { ReactNode } from 'react';
-
-export interface InputError {
-  title: string;
-  detail?: string;
-  /** 1-based line number in the input, when we know it. */
-  line?: number;
-  offending?: string;
-  hint: string;
-}
+import type { InputError } from '../lib/protocol';
 
 export function ErrorState({ error, onRetry }: { error: InputError; onRetry: () => void }) {
   return (

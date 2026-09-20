@@ -1,0 +1,94 @@
+@@@
+960e0a533f32af33405c55fbf2446057b95188da
+Ada Lovelace
+Ada@Example.com
+2026-09-21T02:11:27+05:30
+initial: add engine
+
+2	0	src/core/engine.js
+@@@
+9f89f39d979e90d0f44b2d82a42e00ede50a5f14
+Ada Lovelace
+Ada@Example.com
+2026-09-21T02:11:27+05:30
+empty commit | with a pipe and 'quotes' and a "dquote"
+@@@
+99983b45bc46cc6ebfc5c4f0b01eddc798b2d7a7
+Ada Lovelace
+Ada@Example.com
+2026-09-21T02:11:27+05:30
+rename engine -> runner, add lines
+
+2	0	src/core/{engine.js => runner.js}
+@@@
+3fcc0c32b50400e8ac755b898ff8e8a874e52d05
+Ada Lovelace
+Ada@Example.com
+2026-09-21T02:11:27+05:30
+add binary
+
+-	-	logo.png
+@@@
+60a62aa097aa716bbd6b04adc2679eb3d0391b95
+Ada Lovelace
+Ada@Example.com
+2026-09-21T02:11:27+05:30
+move dir src/core -> lib/kernel
+
+0	0	{src/core => lib/kernel}/runner.js
+@@@
+5a79663eae1196f5afdbb35d833e68e6984b5972
+Ada Lovelace
+Ada@Example.com
+2026-09-21T02:11:27+05:30
+unicode + space path
+
+1	0	sub/naïve file.txt
+@@@
+4798b4864a025acc91a5e79a878f1171de9308c3
+Ada Lovelace
+Ada@Example.com
+2026-09-21T02:11:27+05:30
+move out of sub
+
+0	0	sub/naïve file.txt => naïve file.txt
+@@@
+8ff1b6e46de359ad0c9e9d0c552ad99042b8ab4f
+Ada Lovelace
+Ada@Example.com
+2026-09-21T02:11:27+05:30
+delete binary
+
+-	-	logo.png
+@@@
+c710175fbae253e38e5552a37a80d25a3221a4ec
+Grace Hopper
+grace@example.com
+2020-01-01T00:00:00Z
+rebased-looking commit with older date
+
+2	0	lib/kernel/runner.js
+@@@
+b23e116e57f766416140ff3e6f89ef2a7335ad82
+Grace Hopper
+grace@example.com
+2026-09-21T02:11:42+05:30
+add pkg/thing.txt
+
+1	0	pkg/thing.txt
+@@@
+5cf2d23a59e8e8a9c4b6bf490768ec067d6e119d
+Grace Hopper
+grace@example.com
+2026-09-21T02:11:42+05:30
+into subdir
+
+0	0	pkg/{ => sub}/thing.txt
+@@@
+7960ab78341b1b4a2b8a8d5007ae5d04ff770e3d
+Grace Hopper
+grace@example.com
+2026-09-21T02:11:42+05:30
+back out of subdir
+
+0	0	pkg/{sub => }/thing.txt

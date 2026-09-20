@@ -1,35 +1,62 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AmbientMap } from '../components/AmbientMap';
 import { CommandPanel } from '../components/CommandPanel';
-import { ErrorState, type InputError } from '../components/States';
+import { ErrorState } from '../components/States';
 import { Logo } from '../components/Logo';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { transition, usePrefersReducedMotion } from '../lib/motion';
 import { useUi } from '../store/ui';
-import { sniffInput } from '../lib/sniff';
+import { useAtlas } from '../store/atlas';
+import { load } from '../lib/atlasClient';
+import { DEMO } from '../lib/demo';
 import '../styles/landing.css';
 
 export function Landing() {
   const [revealed, setRevealed] = useState(false);
-  const [error, setError] = useState<InputError | null>(null);
   const reduced = usePrefersReducedMotion();
   const toast = useUi((s) => s.toast);
+  const atlas = useAtlas();
+
+  const start = useCallback(
+    (blob: Blob, repo: string, gzip: boolean, attribution?: typeof DEMO.attribution) => {
+      const cancel = load(
+        { type: 'parse', blob, repo, gzip, ...(attribution ? { attribution } : {}) },
+        {
+          onProgress: useAtlas.getState().setProgress,
+          onDone: useAtlas.getState().setSummary,
+          onError: useAtlas.getState().setError,
+          onCancelled: useAtlas.getState().reset,
+        },
+      );
+      useAtlas.getState().begin(cancel);
+    },
+    [],
+  );
 
   const onInput = useCallback(
-    async (blob: Blob, name: string) => {
+    (blob: Blob, name: string) => {
       setRevealed(true);
-      const problem = await sniffInput(blob);
-      if (problem) {
-        setError(problem);
-        return;
-      }
-      setError(null);
-      // The streaming parser arrives in M1; the handoff point is already here.
-      toast(`“${name}” looks like a git log. Parsing lands in the next milestone.`);
+      start(blob, name.replace(/\.(txt|log)$/i, ''), name.endsWith('.gz'));
     },
-    [toast],
+    [start],
   );
+
+  const onDemo = useCallback(async () => {
+    try {
+      const res = await fetch(DEMO.url);
+      if (!res.ok) throw new Error(`${res.status}`);
+      start(await res.blob(), DEMO.repo, false, DEMO.attribution);
+    } catch (e) {
+      console.warn('demo load failed', e);
+      toast('The demo file could not be read from this page.', 'error');
+    }
+  }, [start, toast]);
+
+  // An error from the worker opens the panel so the message is next to the fix.
+  useEffect(() => {
+    if (atlas.status === 'error') setRevealed(true);
+  }, [atlas.status]);
 
   return (
     <div className="landing">
@@ -62,7 +89,7 @@ export function Landing() {
           </p>
 
           <div className="hero-actions">
-            <button type="button" className="btn btn-primary" onClick={() => toast('The demo dataset lands in the next milestone.')}>
+            <button type="button" className="btn btn-primary" onClick={onDemo}>
               Try the demo
             </button>
             <button
@@ -86,14 +113,14 @@ export function Landing() {
           <AnimatePresence mode="wait" initial={false}>
             {revealed && (
               <motion.div
-                key={error ? 'error' : 'steps'}
+                key={atlas.error ? 'error' : 'steps'}
                 initial={reduced ? { opacity: 0 } : { opacity: 0, y: 12 }}
                 animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
                 exit={reduced ? { opacity: 0 } : { opacity: 0, y: -8 }}
                 transition={transition(reduced)}
               >
-                {error ? (
-                  <ErrorState error={error} onRetry={() => setError(null)} />
+                {atlas.error ? (
+                  <ErrorState error={atlas.error} onRetry={() => useAtlas.getState().reset()} />
                 ) : (
                   <CommandPanel onInput={onInput} />
                 )}
@@ -104,11 +131,9 @@ export function Landing() {
       </main>
 
       <footer className="landing-foot">
-        <span className="tiny">
-          Sizes are estimated from line counts, never from file contents.
-        </span>
+        <span className="tiny">Sizes are estimated from line counts, never from file contents.</span>
         <span className="tiny foot-right">
-          Demo dataset: bundled in M1, with its licence and attribution shown here.
+          Demo history: {DEMO.attribution.repo} — {DEMO.attribution.license} licensed.
         </span>
       </footer>
     </div>
