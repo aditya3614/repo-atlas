@@ -131,6 +131,67 @@ export interface SubjectWindow {
   authors: Uint32Array;
 }
 
+export interface Hotspot {
+  fileId: number;
+  path: string;
+  score: number;
+  commits: number;
+  authors: number;
+  lines: number;
+  reason: string;
+}
+
+export interface FolderOwnership {
+  path: string;
+  busFactor: number;
+  topAuthor: number;
+  topShare: number;
+  authors: number;
+  lines: number;
+  files: number;
+}
+
+export interface StoryFact {
+  id: string;
+  kind: string;
+  text: string;
+  jumpTo: number;
+  focusPath?: string;
+}
+
+export interface MeaningPayload {
+  commit: number;
+  hotspots: Hotspot[];
+  windowDays: number;
+  singleOwner: FolderOwnership[];
+  facts: StoryFact[];
+}
+
+export interface SearchHit {
+  fileId: number;
+  path: string;
+  score: number;
+}
+
+/** Everything the Selection tab shows about one file. */
+export interface FileDetail {
+  fileId: number;
+  path: string;
+  size: number;
+  commits: number;
+  firstTime: number;
+  lastTouch: number;
+  createdBy: string;
+  type: number;
+  /** Lines added per author, biggest first. */
+  authors: { name: string; email: string; adds: number; bot: boolean }[];
+  /** The five commits that changed this file most. */
+  biggest: { commit: number; subject: string; lines: number; time: number }[];
+  busFactor: number;
+  folder: string;
+  history: Float32Array;
+}
+
 export interface Sparkline {
   fileId: number;
   values: Float32Array;
@@ -143,7 +204,10 @@ export type ToWorker =
   | { type: 'sparkline'; fileId: number; samples: number }
   | { type: 'timeline'; includeBots: boolean }
   | { type: 'cochange'; limit: number }
-  | { type: 'subjects'; from: number; count: number };
+  | { type: 'subjects'; from: number; count: number }
+  | { type: 'meaning'; commit: number }
+  | { type: 'search'; query: string; commit: number; limit: number }
+  | { type: 'detail'; fileId: number; commit: number };
 
 export type FromWorker =
   | { type: 'progress'; progress: Progress }
@@ -154,4 +218,7 @@ export type FromWorker =
   | { type: 'sparkline'; sparkline: Sparkline }
   | { type: 'timeline'; timeline: TimelinePayload }
   | { type: 'cochange'; cochange: CoChangePayload }
-  | { type: 'subjects'; window: SubjectWindow };
+  | { type: 'subjects'; window: SubjectWindow }
+  | { type: 'meaning'; meaning: MeaningPayload }
+  | { type: 'search'; query: string; hits: SearchHit[] }
+  | { type: 'detail'; detail: FileDetail };

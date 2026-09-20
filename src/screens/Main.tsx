@@ -6,6 +6,9 @@ import { ColorModes } from '../components/ColorModes';
 import { Legend } from '../components/Legend';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { SidePanel } from '../components/SidePanel';
+import { Search } from '../components/Search';
+import { useMeaning } from '../store/meaning';
+import { AnimatePresence } from 'framer-motion';
 import { Dock } from '../components/Dock';
 import { atlasWorker } from '../lib/atlasClient';
 import {
@@ -14,6 +17,7 @@ import {
   seekToCommit,
   setTimeline,
   SPEEDS,
+  subscribeClock,
   type Speed,
 } from '../map/clock';
 import type { FromWorker, TimelinePayload } from '../lib/protocol';
@@ -36,6 +40,8 @@ export function Main() {
   const [timeline, setTimelineState] = useState<TimelinePayload | null>(null);
   const showArcs = useMap((s) => s.showArcs);
   const setShowArcs = useMap((s) => s.setShowArcs);
+  const selectedFile = useMap((s) => s.selectedFile);
+  const searchOpen = useMeaning((s) => s.searchOpen);
 
   useEffect(() => setPal(readPalette(document.documentElement)), [theme]);
 
@@ -44,6 +50,46 @@ export function Main() {
     clock.commits = summary.commits;
     clock.commit = summary.commits - 1;
   }, [summary.commits]);
+
+  /*
+   * Story facts, hotspots and ownership all depend on where the playhead is,
+   * so they are recomputed when it settles — not while it is moving, which
+   * would mean a full pass over the history on every frame.
+   */
+  useEffect(() => {
+    const w = atlasWorker();
+    const onMessage = (e: MessageEvent<FromWorker>) => {
+      if (e.data.type === 'meaning') useMeaning.getState().setMeaning(e.data.meaning);
+      else if (e.data.type === 'detail') useMeaning.getState().setDetail(e.data.detail);
+      else if (e.data.type === 'search') useMeaning.getState().setHits(e.data.query, e.data.hits);
+    };
+    w.addEventListener('message', onMessage);
+
+    let pending = 0;
+    const ask = () => {
+      window.clearTimeout(pending);
+      pending = window.setTimeout(() => {
+        if (clock.playing || clock.scrubbing) return;
+        w.postMessage({ type: 'meaning', commit: clock.commit });
+      }, 260);
+    };
+    ask();
+    const unsubscribe = subscribeClock(ask);
+    return () => {
+      window.clearTimeout(pending);
+      unsubscribe();
+      w.removeEventListener('message', onMessage);
+    };
+  }, []);
+
+  // The selected file's detail is fetched for the commit on screen.
+  useEffect(() => {
+    if (selectedFile < 0) {
+      useMeaning.getState().setDetail(null);
+      return;
+    }
+    atlasWorker().postMessage({ type: 'detail', fileId: selectedFile, commit: clock.commit });
+  }, [selectedFile]);
 
   // The timeline is built once the history is loaded; until it arrives the
   // dock shows its own waiting state rather than an empty bar.
@@ -74,6 +120,12 @@ export function Main() {
       const n = Number(e.key);
       if (e.key !== ' ' && n >= 1 && n <= MODES.length) {
         setMode(MODES[n - 1]!);
+        return;
+      }
+
+      if (e.key === '/') {
+        e.preventDefault();
+        useMeaning.getState().setSearchOpen(true);
         return;
       }
 
@@ -113,6 +165,10 @@ export function Main() {
           useMap.getState().setShowArcs(!useMap.getState().showArcs);
           return;
         case 'Escape': {
+          if (useMeaning.getState().searchOpen) {
+            useMeaning.getState().setSearchOpen(false);
+            return;
+          }
           const { selectedFile, root: r } = useMap.getState();
           if (selectedFile >= 0) useMap.getState().setSelectedFile(-1);
           else if (r !== '') setRoot(r.includes('/') ? r.slice(0, r.lastIndexOf('/')) : '');
@@ -163,6 +219,14 @@ export function Main() {
         <div className="map-bar-right">
           <button
             type="button"
+            className="btn btn-ghost"
+            onClick={() => useMeaning.getState().setSearchOpen(true)}
+            title="Find a file — /"
+          >
+            Search <kbd className="kbd">/</kbd>
+          </button>
+          <button
+            type="button"
             className={`btn btn-ghost arc-toggle ${showArcs ? 'is-on' : ''}`}
             aria-pressed={showArcs}
             onClick={() => setShowArcs(!showArcs)}
@@ -197,8 +261,10 @@ export function Main() {
           <MapView summary={summary} />
           <Legend mode={mode} pal={pal} tables={tables} summary={summary} />
         </div>
-        <SidePanel summary={summary} />
+        <SidePanel summary={summary} tables={tables} />
       </main>
+
+      <AnimatePresence>{searchOpen && <Search />}</AnimatePresence>
 
       {pal && tables && (
         <Dock

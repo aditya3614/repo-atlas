@@ -72,14 +72,14 @@ test('nothing is sent anywhere after load', async ({ page }) => {
 
 for (const theme of THEMES) {
   for (const size of SIZES) {
-    test(`overview ${theme} ${size.name}`, async ({ page }) => {
+    test(`main view ${theme} ${size.name}`, async ({ page }) => {
       await page.setViewportSize({ width: size.width, height: size.height });
       await page.addInitScript((t) => localStorage.setItem('atlas.theme', t), theme);
       await page.goto('/');
       await page.getByRole('button', { name: 'Try the demo' }).click();
       await expect(page.locator('.map-wrap')).toBeVisible({ timeout: 15_000 });
       await page.waitForTimeout(400);
-      await page.screenshot({ path: `shots/overview-${theme}-${size.name}.png` });
+      await page.screenshot({ path: `shots/main-${theme}-${size.name}.png` });
     });
   }
 }

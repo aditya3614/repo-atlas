@@ -31,6 +31,8 @@
   --font-ui: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-display: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'Source Code Pro', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Reserved for the story sentences, which are prose rather than interface. */
+  --font-story: Newsreader, Georgia, 'Times New Roman', serif;
 
   /* --- Spacing: Wise 8px base --- */
   --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
@@ -69,6 +71,14 @@
   --cat-9: #e26fa0;
   --cat-10: #8c9ea3;
   --cat-rest: #6b6e68;
+
+  /*
+   * Map labels sit directly on a cell, whose colour is data, not chrome. One
+   * fixed ink cannot work at both ends of a ramp, so each cell picks the one
+   * that contrasts with it. Both are checked against every cell colour.
+   */
+  --label-on-light: #14170f;
+  --label-on-dark: #f6f8f2;
 }
 
 /* ---------------- Night (default) ---------------- */
@@ -112,12 +122,12 @@
 
   /* Age: new files are lime, old files fade to a dry sand */
   --age-new: #9fe870;
-  --age-mid: #6f7d53;
+  --age-mid: #5c6a44;
   --age-old: #4a4a42;
 
   /* Churn: its own hue so it is never mistaken for activity */
   --churn-0: #20241f;
-  --churn-1: #4b7d7d;
+  --churn-1: #3c6d6f;
   --churn-2: #a0e1e1;
 
   --type-code: #9fe870;
@@ -142,7 +152,7 @@
 
   --text: #163300;
   --text-muted: #454745;
-  --text-faint: #6f736c;
+  --text-faint: #5c6059;
 
   --hairline: rgba(22, 51, 0, 0.12);
   --hairline-strong: rgba(22, 51, 0, 0.24);
@@ -178,7 +188,7 @@
   --type-code: #4e9b23;
   --type-tests: #1f6f6f;
   --type-docs: #b98400;
-  --type-config: #62777d;
+  --type-config: #5f5a52;
   --type-assets: #8b4fa8;
 
   --shadow-raised: rgba(22, 51, 0, 0.08) 0 8px 24px 0;

@@ -23,7 +23,10 @@ counts, never file contents.
   quiet-period skipping, animated transitions for files appearing, moving and
   disappearing, the commit ticker, and the keyboard transport. Co-change arcs
   came forward from the stretch list on request.
-- M4 meaning · M5 finish: to come.
+- **M4 — meaning: done.** Story facts, the Hotspots tab, single-owner folders,
+  the full Selection panel, fuzzy search, and a typography and contrast pass
+  across both themes.
+- M5 finish: to come.
 
 ## Running it
 
@@ -93,6 +96,28 @@ the main thread tweens cell to cell between them: a file that survives slides
 and resizes, one that is new grows in with a flash, one that has gone collapses
 to an outline.
 
+Story facts, hotspots and folder ownership are recomputed in the worker when
+the playhead settles, never while it is moving. Every sentence states the window
+it was measured over: a hotspot says how many commits, how many people and over
+how many months, and a single-owner claim gives the share it is based on.
+
+### Colour and type
+
+Text contrast is enforced by a test, not by eye. `src/styles/contrast.test.ts`
+reads the tokens out of the stylesheet and checks every pairing the UI uses in
+both themes against the 4.5:1 requirement in section 11. It found three real
+failures, all now fixed: Paper's faint text on a tinted surface, and two ramp
+stops that sat in a mid-tone band where neither black nor white text works.
+
+Map labels sit directly on a cell whose colour is data, so no single ink can
+work: a grey that reads on a dark cell vanishes on a hot yellow one. Each cell
+now picks its ink from its own luminance, and the same test checks both inks
+against every cell colour in both themes.
+
+Three faces, each with a job: **Inter** for the interface, **Source Code Pro**
+with tabular figures for paths and numbers, and **Newsreader** for the story
+sentences, which are prose rather than chrome.
+
 ### Measured, on this machine (M-series MacBook Air, Chromium 1243)
 
 | | |
@@ -109,6 +134,7 @@ to an outline.
 | The same at retina density, four times the pixels | 16.7 ms median and p95 |
 | Playing the synthetic history at 4x | 16.7 ms median and p95, worst 16.8 ms |
 | Dragging the playhead across the whole timeline | 16.7 ms median and p95 |
+| Ownership, hotspots and story facts over 100k commits | ~200 ms in total |
 
 The footprint is computed from the typed arrays' actual `byteLength` plus a
 two-bytes-per-character estimate for the string tables. It is reported rather
@@ -184,6 +210,38 @@ directions. Recorded here as they are made.
 - **`heatAt` and `lastTouch` are one field.** Both are only ever written at a
   touch, with the same value, so the model keeps one and saves 8 bytes per file
   per checkpoint.
+
+## The demo's story cards, checked by hand
+
+Section 13 asks for these to be spot-checked against `git log`. Against the
+axios clone, on 21 September 2026:
+
+| Card | Repo Atlas | git |
+| --- | --- | --- |
+| Busiest year | 2026, 386 commits | 386 |
+| First commit | 18 Aug 2014, Matt Zabriskie, "first commit" | same |
+| Largest commit | ~52k lines, "refactor: bump minors package versions (#7356)", Jay | 51,771 lines, same commit |
+| Longest quiet spell | 139 days, 17 Sep 2018 to 4 Feb 2019 | same |
+| Busiest week | 29 commits, week of 2 Jun 2022 | same |
+
+Two of these needed care rather than just a check:
+
+- **The longest gap is 139 days, not the 165 that git's linear order suggests.**
+  Thirteen commits in axios carry an author date earlier than the commit before
+  them, which is what a rebase leaves behind. Sorting the author dates gives
+  139 days, and that is the number a person would verify. The running-maximum
+  time axis agrees with it.
+- **The busiest week excludes bots**, exactly as the streamgraph does — 29
+  rather than the 33 that counting dependabot would give. The sentence now says
+  so, because the same week is the busiest either way only by coincidence.
+
+Two wordings were wrong before they were checked, and were rewritten to say what
+was actually measured. "Everything in tests was written by Jay" became "Jay
+wrote 86% of its 59k lines … with 86 others accounting for the rest", which is
+what a bus factor of 1 under the 80% rule actually means. And "rewritten about
+328 times over" turned out to be churn divided by a file our own size estimate
+had left at a handful of lines; it now reports the churn and the size separately,
+and only for files of at least 80 lines.
 
 ## Honest numbers
 

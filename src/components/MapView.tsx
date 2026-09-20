@@ -4,6 +4,7 @@ import { readPalette, type Mode, type Palette } from '../map/colors';
 import { baseName } from '../map/render';
 import { useMap } from '../store/map';
 import { clock, subscribeClock } from '../map/clock';
+import { useMeaning } from '../store/meaning';
 import { useUi } from '../store/ui';
 import { atlasWorker } from '../lib/atlasClient';
 import { usePrefersReducedMotion } from '../lib/motion';
@@ -29,6 +30,9 @@ export function MapView({ summary }: { summary: Summary }) {
   const tables = useMap((s) => s.tables);
   const showArcs = useMap((s) => s.showArcs);
   const cochange = useMap((s) => s.cochange);
+  const hits = useMeaning((s) => s.hits);
+  const layout = useMap((s) => s.layout);
+  const layoutVersion = layout?.id ?? 0;
   const selectedFile = useMap((s) => s.selectedFile);
 
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
@@ -203,6 +207,24 @@ export function MapView({ summary }: { summary: Summary }) {
     [request],
   );
 
+  /*
+   * Search dims rather than hides: the map keeps its shape, and the matches
+   * are the only thing at full strength.
+   */
+  useEffect(() => {
+    const c = controllerRef.current;
+    const l = c.currentLayout();
+    if (!l) return;
+    if (hits.length === 0) {
+      c.setDimmed(null);
+      return;
+    }
+    const wanted = new Set(hits.map((h) => h.fileId));
+    const mask = new Uint8Array(l.fileIds.length);
+    for (let i = 0; i < l.fileIds.length; i++) mask[i] = wanted.has(l.fileIds[i]!) ? 0 : 1;
+    c.setDimmed(mask);
+  }, [hits, layoutVersion]);
+
   // Arcs and selection drive the overlay, not the layout.
   useEffect(() => {
     const c = controllerRef.current;
@@ -220,7 +242,6 @@ export function MapView({ summary }: { summary: Summary }) {
     controllerRef.current.pointerMove(e.clientX - r.left, e.clientY - r.top, e.clientX, e.clientY);
   }, []);
 
-  const layout = useMap((s) => s.layout);
   const label = useMemo(() => describe(summary, layout, mode, root), [summary, layout, mode, root]);
 
   return (

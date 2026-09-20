@@ -103,6 +103,38 @@ export class MapRenderer {
     }
   }
 
+  /** The ink a label on cell i must use to stay readable on its own colour. */
+  private cellInk(
+    l: LayoutPayload,
+    i: number,
+    mode: Mode,
+    pal: Palette,
+    tables: Tables,
+    from: number,
+    to: number,
+  ): string {
+    const mask = pal.needsDarkInk;
+    let light: number;
+    switch (mode) {
+      case 'activity':
+        light = mask.activity[lutIndex(activityT(l.heat[i]!))]!;
+        break;
+      case 'author':
+        light = mask.author[tables.authorSlot[l.author[i]!] ?? 10]!;
+        break;
+      case 'age':
+        light = mask.age[lutIndex(ageT(l.firstTime[i]!, from, to))]!;
+        break;
+      case 'churn':
+        light = mask.churn[lutIndex(churnT(l.churn[i]!, tables.maxChurn))]!;
+        break;
+      case 'type':
+        light = mask.type[l.type[i]!] ?? 0;
+        break;
+    }
+    return light === 1 ? pal.inkDark : pal.inkLight;
+  }
+
   drawBase(
     ctx: CanvasRenderingContext2D,
     frame: Frame,
@@ -229,7 +261,7 @@ export class MapRenderer {
     // Labels ride along with the tween rather than disappearing during
     // playback, which would leave the map anonymous exactly when it is moving.
     if (opts.labels) {
-      this.drawLabels(ctx, frame, tables, pal, camera, opts.width, opts.height, opts.alpha);
+      this.drawLabels(ctx, frame, tables, pal, camera, opts, mode, from, to);
     }
   }
 
@@ -239,10 +271,12 @@ export class MapRenderer {
     tables: Tables,
     pal: Palette,
     camera: Camera,
-    width: number,
-    height: number,
-    alpha: number,
+    opts: { width: number; height: number; alpha: number },
+    mode: Mode,
+    from: number,
+    to: number,
   ): void {
+    const { width, height, alpha } = opts;
     const { k, tx, ty } = camera;
     const l = frame.next;
     const moving = frame.prev !== null && frame.e < 1;
@@ -251,6 +285,7 @@ export class MapRenderer {
     // Folder names, in the gutter the layout reserved for them.
     ctx.font = '700 10px Inter, sans-serif';
     ctx.fillStyle = pal.labelStrong;
+    ctx.letterSpacing = '0.08em';
     const fr = l.folderRects;
     for (let i = 0; i < l.folderDepth.length; i++) {
       const x0 = fr[i * 4]! * k + tx;
@@ -263,11 +298,12 @@ export class MapRenderer {
       ctx.globalAlpha = alpha * (l.folderDepth[i]! === 1 ? 0.95 : 0.6);
       ctx.fillText(fit(ctx, name.toUpperCase(), w - 10), x0 + 5, y0 + 8);
     }
+    ctx.letterSpacing = '0px';
 
-    // File names only once a cell is big enough to hold one.
-    ctx.font = '500 10px Inter, sans-serif';
-    ctx.fillStyle = pal.label;
-    ctx.globalAlpha = alpha * 0.85;
+    // File names only once a cell is big enough to hold one. The ink is chosen
+    // per cell: a fixed grey disappears on a hot yellow cell and on a dark one.
+    ctx.font = '600 10px Inter, sans-serif';
+    ctx.globalAlpha = alpha * 0.92;
     const r = l.rects;
     const pr = frame.prev?.rects;
     const pon = frame.prevOfNext;
@@ -291,6 +327,7 @@ export class MapRenderer {
       const px = x0 * k + tx;
       const py = y0 * k + ty;
       if (px > width || py > height || px + w < 0 || py + h < 0) continue;
+      ctx.fillStyle = this.cellInk(l, i, mode, pal, tables, from, to);
       ctx.fillText(fit(ctx, baseName(tables.paths[l.pathIds[i]!]!), w - 8), px + 4, py + h / 2);
     }
     ctx.globalAlpha = alpha;

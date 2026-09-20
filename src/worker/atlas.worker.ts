@@ -6,6 +6,7 @@ import { FileIndex } from './fileIndex';
 import { computeLayout, transferables } from './layout';
 import { buildTimeline } from './timeline';
 import { buildCoChange } from './cochange';
+import { hotspots, ownership, searchPaths, singleOwner, storyFacts } from './meaning';
 import type { FromWorker, InputError, Progress, Summary, Tables, ToWorker } from '../lib/protocol';
 
 /**
@@ -29,6 +30,7 @@ export interface Loaded {
 let loaded: Loaded | null = null;
 /** Co-change is expensive and never changes, so it is built once on demand. */
 let cochange: ReturnType<typeof buildCoChange> | null = null;
+let timeline: ReturnType<typeof buildTimeline> | null = null;
 
 const post = (m: FromWorker, transfer?: Transferable[]) =>
   (self as unknown as Worker).postMessage(m, transfer ?? []);
@@ -195,6 +197,63 @@ async function parse(msg: Extract<ToWorker, { type: 'parse' }>): Promise<void> {
   post({ type: 'done', summary, tables });
 }
 
+/** Everything the Selection tab needs about one file, in one reply. */
+function detailOf(fileId: number, commit: number) {
+  const { dataset: d, checkpoints: cp, index } = loaded!;
+  const at = Math.max(0, Math.min(d.commitCount - 1, commit));
+  const state = cp.stateAt(at);
+  const path = d.paths[state.pathIndex[fileId]!] ?? d.paths[d.files.firstPath[fileId]!]!;
+
+  const start = index.fileOffsets[fileId]!;
+  const end = index.fileOffsets[fileId + 1]!;
+
+  const byAuthor = new Map<number, number>();
+  const commits: { commit: number; subject: string; lines: number; time: number }[] = [];
+  for (let j = start; j < end; j++) {
+    const i = index.fileChanges[j]!;
+    const k = index.changeCommit[i]!;
+    if (k > at) break;
+    const a = d.author[k]!;
+    byAuthor.set(a, (byAuthor.get(a) ?? 0) + d.adds[i]!);
+    commits.push({
+      commit: k,
+      subject: d.subjects[k] ?? '',
+      lines: d.adds[i]! + d.dels[i]!,
+      time: d.time[k]!,
+    });
+  }
+  commits.sort((x, y) => y.lines - x.lines);
+
+  const authors = [...byAuthor.entries()]
+    .sort((x, y) => y[1] - x[1])
+    .map(([a, adds]) => ({
+      name: d.authors.names[a]!,
+      email: d.authors.emails[a]!,
+      adds,
+      bot: d.authors.bot[a] === 1,
+    }));
+
+  // Bus factor for the file's own folder, which is what the chip reports.
+  const folder = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+  const own = folder === '' ? null : ownership(d, state, at).get(folder) ?? null;
+
+  return {
+    fileId,
+    path,
+    size: state.size[fileId]!,
+    commits: end - start,
+    firstTime: d.time[d.files.firstCommit[fileId]!] ?? 0,
+    lastTouch: state.lastTouch[fileId]!,
+    createdBy: d.authors.names[d.files.firstAuthor[fileId]!] ?? 'unknown',
+    type: index.pathType[state.pathIndex[fileId]!]!,
+    authors: authors.slice(0, 8),
+    biggest: commits.slice(0, 5),
+    busFactor: own?.busFactor ?? 0,
+    folder,
+    history: index.sizeHistory(fileId, BINARY_WEIGHT, 96),
+  };
+}
+
 function maxChurn(d: Dataset): number {
   let max = 0;
   for (let f = 0; f < d.fileCount; f++) {
@@ -223,6 +282,7 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
     cancelled = false;
     loaded = null;
     cochange = null;
+    timeline = null;
     void parse(msg);
     return;
   }
@@ -239,6 +299,7 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
   if (msg.type === 'timeline') {
     if (!loaded) return;
     const t = buildTimeline(loaded.dataset, msg.includeBots);
+    if (!msg.includeBots) timeline = t;
     // `times` belongs to the dataset and must not be transferred away.
     post({ type: 'timeline', timeline: { ...t, times: t.times.slice() } });
     return;
@@ -255,6 +316,41 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
         maxCount: cochange.maxCount,
       },
     });
+    return;
+  }
+  if (msg.type === 'meaning') {
+    if (!loaded) return;
+    const { dataset: d, checkpoints: cp, index } = loaded;
+    const commit = Math.max(0, Math.min(d.commitCount - 1, msg.commit));
+    const state = cp.stateAt(commit);
+    const own = ownership(d, state, commit);
+    const spots = hotspots(d, state, commit, 20);
+    timeline ??= buildTimeline(d, false);
+    post({
+      type: 'meaning',
+      meaning: {
+        commit,
+        hotspots: spots.list,
+        windowDays: spots.windowDays,
+        singleOwner: singleOwner(own, 12),
+        facts: storyFacts(d, index, state, timeline, own, cp.peakAlive, cp.peakAliveAt),
+      },
+    });
+    return;
+  }
+  if (msg.type === 'search') {
+    if (!loaded) return;
+    const state = loaded.checkpoints.stateAt(msg.commit);
+    post({
+      type: 'search',
+      query: msg.query,
+      hits: searchPaths(loaded.dataset, state, msg.query, msg.limit),
+    });
+    return;
+  }
+  if (msg.type === 'detail') {
+    if (!loaded) return;
+    post({ type: 'detail', detail: detailOf(msg.fileId, msg.commit) });
     return;
   }
   if (msg.type === 'subjects') {
