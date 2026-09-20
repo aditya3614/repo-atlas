@@ -60,3 +60,18 @@ test('no network requests after load', async ({ page }) => {
   expect(late, `unexpected requests: ${late.join(', ')}`).toEqual([]);
   expect(errors, `console errors: ${errors.join(' | ')}`).toEqual([]);
 });
+
+test('reduced motion: the ambient map is static', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+  const shot = () => page.locator('canvas.ambient').screenshot();
+  const a = await shot();
+  await page.waitForTimeout(1200);
+  const b = await shot();
+  expect(Buffer.compare(a, b), 'ambient map moved under prefers-reduced-motion').toBe(0);
+
+  await page.screenshot({ path: 'shots/landing-night-reduced-1440x900.png' });
+});
