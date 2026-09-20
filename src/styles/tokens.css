@@ -1,0 +1,150 @@
+/*
+ * Repo Atlas design tokens.
+ *
+ * Palette and type come from the Wise design system: deep forest green as the
+ * anchor, lime as the single high-energy accent, Inter everywhere. Wise Sans is
+ * not distributable, so Inter 900 with tight leading stands in for display text.
+ *
+ * Two themes share one set of semantic names. Accents keep a fixed meaning in
+ * both themes so a colour always says the same thing:
+ *   lime   -> new / added        red -> deleted / removed
+ *   cyan   -> selection / info   heat ramp -> recent activity
+ */
+
+:root {
+  /* --- Wise brand scale (raw values; only referenced by semantic tokens) --- */
+  --w-forest: #163300;
+  --w-forest-deep: #0d1f00;
+  --w-ink: #0e0f0c;
+  --w-charcoal: #21231d;
+  --w-gray: #454745;
+  --w-white: #ffffff;
+  --w-lime: #9fe870;
+  --w-lime-soft: #e2f6d5;
+  --w-cyan: #a0e1e1;
+  --w-yellow: #fadc65;
+  --w-warning: #ffd11a;
+  --w-error: #cb272f;
+  --w-error-dark: #b8232b;
+
+  /* --- Type --- */
+  --font-ui: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Source Code Pro', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* --- Spacing: Wise 8px base --- */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-7: 32px; --s-8: 40px;
+  --s-9: 56px; --s-10: 92px; --s-11: 100px;
+
+  /* --- Radii: Wise pills for actions, 10px for cards --- */
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  --r-pill: 9999px;
+
+  /* --- Motion --- */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 250ms;
+  --t-mid: 320ms;
+  --t-slow: 450ms;
+
+  --max-w: 1440px;
+  --panel-w: 360px;
+  --dock-h: 132px;
+
+  /* --- Author categorical palette (10 + rest) ---
+     Wise accents extended with same-family tints so hues stay distinguishable
+     under deuteranopia; verified again in M2 against simulation. */
+  --cat-1: #9fe870;
+  --cat-2: #a0e1e1;
+  --cat-3: #fadc65;
+  --cat-4: #cb272f;
+  --cat-5: #5aa9d6;
+  --cat-6: #c98bdb;
+  --cat-7: #f2994a;
+  --cat-8: #3f7d3f;
+  --cat-9: #e26fa0;
+  --cat-10: #8c9ea3;
+  --cat-rest: #6b6e68;
+}
+
+/* ---------------- Night (default) ---------------- */
+:root,
+:root[data-theme='night'] {
+  color-scheme: dark;
+
+  --bg: #0e0f0c;
+  --bg-deep: #090a08;
+  --surface: #163300;
+  --surface-2: #21231d;
+  --surface-3: #2c2f27;
+
+  --text: #ffffff;
+  --text-muted: #a9aea4;
+  --text-faint: #8b9086;   /* 5.6:1 on --bg */
+
+  --hairline: rgba(250, 249, 245, 0.12);
+  --hairline-strong: rgba(250, 249, 245, 0.24);
+
+  --accent: #9fe870;          /* new / additions / primary emphasis */
+  --accent-ink: #163300;      /* text on top of --accent */
+  --accent-soft: rgba(159, 232, 112, 0.15);
+  --info: #a0e1e1;            /* selection / info */
+  --danger: #cb272f;          /* deleted / removed */
+  --warn: #ffd11a;
+
+  --focus: #9fe870;
+  --focus-glow: rgba(159, 232, 112, 0.3);
+
+  /* Activity heat ramp: cold neutral -> lime -> warm yellow -> hot */
+  --heat-0: #2c2f27;
+  --heat-1: #3f5a2a;
+  --heat-2: #9fe870;
+  --heat-3: #fadc65;
+  --heat-4: #ffd11a;
+
+  --map-void: #0b0c0a;
+  --shadow-raised: rgba(0, 0, 0, 0.45) 0 8px 24px 0;
+  --shadow-modal: rgba(0, 0, 0, 0.55) 0 16px 56px 0;
+}
+
+/* ---------------- Paper ---------------- */
+:root[data-theme='paper'] {
+  color-scheme: light;
+
+  --bg: #ffffff;
+  --bg-deep: #f4f7f0;
+  --surface: #ffffff;
+  --surface-2: #e2f6d5;
+  --surface-3: #d3ecc2;
+
+  --text: #163300;
+  --text-muted: #454745;
+  --text-faint: #6f736c;
+
+  --hairline: rgba(22, 51, 0, 0.12);
+  --hairline-strong: rgba(22, 51, 0, 0.24);
+
+  --accent: #163300;
+  --accent-ink: #9fe870;
+  --accent-soft: rgba(159, 232, 112, 0.25);
+  --info: #2f6f8f;
+  --danger: #cb272f;
+  --warn: #b98400;
+
+  --focus: #163300;
+  --focus-glow: rgba(159, 232, 112, 0.45);
+
+  --heat-0: #e8ece3;
+  --heat-1: #c7e3ab;
+  --heat-2: #9fe870;
+  --heat-3: #fadc65;
+  --heat-4: #e8a100;
+
+  --map-void: #f4f7f0;
+  --shadow-raised: rgba(22, 51, 0, 0.08) 0 8px 24px 0;
+  --shadow-modal: rgba(22, 51, 0, 0.15) 0 16px 56px 0;
+}

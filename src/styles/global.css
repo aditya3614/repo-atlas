@@ -1,0 +1,146 @@
+@import './tokens.css';
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 17px;
+  line-height: 27px;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color var(--t-mid) var(--ease), color var(--t-mid) var(--ease);
+}
+
+/* Wise: numbers and paths are monospaced and tabular so columns never jitter. */
+.mono, code, kbd {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+h1, h2, h3, h4, p { margin: 0; }
+
+a { color: inherit; }
+
+button { font-family: inherit; }
+
+::selection { background: var(--accent-soft); }
+
+/* ---- Focus: 2px ring plus a lime halo, Wise's focus treatment ---- */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+  box-shadow: 0 0 0 5px var(--focus-glow);
+}
+
+/* ---- Type roles ---- */
+.display {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 0.92;
+  font-size: clamp(48px, 7.2vw, 100px);
+}
+.h2 { font-size: 35px; font-weight: 600; line-height: 44px; letter-spacing: -0.01em; }
+.h3 { font-size: 20px; font-weight: 700; line-height: 24px; }
+.body-lg { font-size: 17px; line-height: 27px; }
+.body { font-size: 16px; line-height: 24px; }
+.label { font-size: 14px; line-height: 22px; color: var(--text-muted); }
+.small { font-size: 13px; font-weight: 600; line-height: 20px; }
+.tiny { font-size: 12px; font-weight: 500; line-height: 16px; }
+
+.measure { max-width: 720px; }
+
+/* ---- Buttons: Wise pills ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  border-radius: var(--r-pill);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 32px;
+  padding: 0 var(--s-6);
+  min-height: 56px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--t-fast) var(--ease),
+              color var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease);
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+:root[data-theme='night'] .btn-primary:hover { background: #b6f08d; border-color: #b6f08d; }
+:root[data-theme='paper'] .btn-primary:hover { background: var(--w-forest-deep); border-color: var(--w-forest-deep); }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--hairline-strong);
+}
+.btn-secondary:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: transparent;
+  min-height: 40px;
+  font-size: 14px;
+  padding: 0 var(--s-3);
+}
+.btn-ghost:hover { color: var(--text); background: var(--accent-soft); }
+
+/* ---- Cards: Wise 10px radius, hairline border, no resting shadow ---- */
+.card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: transparent;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- Reduced motion: no pulses, no tweens, crossfades only ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

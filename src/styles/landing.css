@@ -1,0 +1,270 @@
+.landing {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.ambient {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+}
+
+/* Scrim: the map stays visible but never fights the text for contrast. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+:root[data-theme='night'] .scrim {
+  background:
+    linear-gradient(to bottom, rgba(14, 15, 12, 0.92) 0%, rgba(14, 15, 12, 0) 130px),
+    linear-gradient(to top, rgba(14, 15, 12, 0.92) 0%, rgba(14, 15, 12, 0) 130px),
+    linear-gradient(100deg, rgba(14, 15, 12, 0.97) 0%, rgba(14, 15, 12, 0.92) 42%, rgba(14, 15, 12, 0.72) 70%, rgba(14, 15, 12, 0.8) 100%),
+    radial-gradient(120% 90% at 8% 40%, rgba(22, 51, 0, 0.55) 0%, rgba(14, 15, 12, 0) 60%);
+}
+:root[data-theme='paper'] .scrim {
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0) 130px),
+    linear-gradient(to top, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0) 130px),
+    linear-gradient(100deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.93) 42%, rgba(255, 255, 255, 0.76) 70%, rgba(255, 255, 255, 0.88) 100%),
+    radial-gradient(120% 90% at 8% 40%, rgba(226, 246, 213, 0.75) 0%, rgba(255, 255, 255, 0) 60%);
+}
+
+.landing-top,
+.landing-body,
+.landing-foot {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding-inline: var(--s-9);
+}
+
+/* ---- top bar ---- */
+.landing-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 76px;
+}
+.brand { display: flex; align-items: center; gap: var(--s-3); color: var(--text); }
+.brand-name { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.top-right { display: flex; align-items: center; gap: var(--s-3); }
+
+.chip-privacy {
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  color: var(--text-muted);
+  font-weight: 500;
+  height: 32px;
+}
+:root[data-theme='night'] .chip-privacy { background: rgba(33, 35, 29, 0.72); }
+:root[data-theme='paper'] .chip-privacy { background: rgba(255, 255, 255, 0.75); }
+.dot-lime { width: 6px; height: 6px; border-radius: 50%; background: var(--w-lime); display: inline-block; }
+.theme-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 1px solid var(--hairline-strong);
+  background: linear-gradient(135deg, var(--text) 50%, transparent 50%);
+}
+
+/* ---- body ---- */
+.landing-body {
+  display: grid;
+  grid-template-columns: minmax(480px, 1fr) minmax(0, 520px);
+  gap: var(--s-10);
+  align-items: center;
+  padding-block: var(--s-8) var(--s-8);
+}
+
+.hero-title { color: var(--text); margin-bottom: var(--s-6); }
+:root[data-theme='night'] .hero-title { text-shadow: 0 2px 40px rgba(14, 15, 12, 0.8); }
+
+.hero-sub { color: var(--text-muted); max-width: 560px; }
+.hero-sub .mono { color: var(--text); font-size: 15px; }
+
+.hero-actions { display: flex; gap: var(--s-3); margin-top: var(--s-7); flex-wrap: wrap; }
+
+.hero-privacy {
+  margin-top: var(--s-6);
+  color: var(--text-faint);
+  max-width: 520px;
+  line-height: 18px;
+}
+
+.aside { min-height: 1px; }
+
+/* ---- steps card ---- */
+.steps { background: var(--bg); padding: var(--s-6); }
+:root[data-theme='night'] .steps { background: rgba(28, 27, 25, 0.82); backdrop-filter: blur(12px); }
+:root[data-theme='paper'] .steps { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); }
+
+.step-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-6); }
+.step { display: grid; grid-template-columns: 26px 1fr; gap: var(--s-4); align-items: start; }
+.step-n {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-ink);
+  font-size: 12px; font-weight: 700;
+}
+.step-body { min-width: 0; display: grid; gap: var(--s-3); }
+.step-body .h3 { color: var(--text); }
+.step-body .label { margin: 0; }
+
+/* segmented control */
+.seg { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--hairline); border-radius: var(--r-pill); width: fit-content; }
+.seg-btn {
+  border: 0; background: transparent; color: var(--text-muted);
+  font-size: 13px; font-weight: 600; line-height: 20px;
+  padding: 4px 14px; border-radius: var(--r-pill); cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.seg-btn:hover { color: var(--text); }
+.seg-btn.is-on { background: var(--accent); color: var(--accent-ink); }
+
+/* command block */
+.cmd { border: 1px solid var(--hairline); border-radius: var(--r-md); overflow: hidden; }
+.cmd-text {
+  margin: 0;
+  padding: var(--s-4);
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--text);
+  /* The command is long and the backslash continuation must stay copyable, so
+     it wraps rather than scrolling out of sight. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--bg-deep);
+}
+:root[data-theme='night'] .cmd-text { background: rgba(9, 10, 8, 0.6); }
+.cmd-copy {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 0;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  font-size: 14px;
+}
+
+/* drop zone */
+.drop {
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--r-md);
+  transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+}
+.drop:hover, .drop:focus-within { border-color: var(--accent); background: var(--accent-soft); }
+.drop.is-over { border-color: var(--accent); background: var(--accent-soft); border-style: solid; }
+.drop-label {
+  display: grid;
+  gap: 4px;
+  padding: var(--s-6) var(--s-4);
+  text-align: center;
+  cursor: pointer;
+}
+.drop-title { font-size: 15px; font-weight: 600; color: var(--text); }
+.drop-title .mono { font-size: 14px; }
+.drop-link { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---- error / empty states ---- */
+.state {
+  padding: var(--s-6);
+  display: grid;
+  gap: var(--s-4);
+  justify-items: start;
+  background: var(--bg);
+}
+:root[data-theme='night'] .state { background: rgba(28, 27, 25, 0.82); backdrop-filter: blur(12px); }
+:root[data-theme='paper'] .state { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); }
+.state-error { border-color: rgba(203, 39, 47, 0.45); }
+.chip-error { background: rgba(203, 39, 47, 0.14); color: var(--danger); }
+:root[data-theme='night'] .chip-error { color: #ff8a90; }
+.state-title { font-size: 24px; line-height: 30px; font-weight: 700; }
+.state-detail { color: var(--text-muted); margin: 0; }
+.state-line {
+  margin: 0;
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-sm);
+  background: var(--bg-deep);
+  border: 1px solid var(--hairline);
+  font-size: 12.5px;
+  line-height: 20px;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--text);
+}
+.state-lineno { color: var(--text-faint); margin-right: var(--s-3); }
+.state-hint { margin: 0; }
+
+/* ---- footer ---- */
+.landing-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  height: 56px;
+  align-items: center;
+  color: var(--text-faint);
+  border-top: 1px solid var(--hairline);
+}
+.foot-right { text-align: right; }
+
+/* ---- toasts ---- */
+.toasts {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: var(--s-7);
+  transform: translateX(-50%);
+  display: grid;
+  gap: var(--s-2);
+  justify-items: center;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  border: 1px solid var(--hairline);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: var(--r-pill);
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--shadow-raised);
+}
+:root[data-theme='paper'] .toast { background: var(--w-forest); color: #fff; border-color: transparent; }
+.toast-error { border-color: rgba(203, 39, 47, 0.5); }
+
+/* ---- responsive: desktop first, simplified below 900px ---- */
+/* Short viewports (a 1024x700 laptop) must still show the footer without scrolling. */
+@media (max-height: 800px) {
+  .landing-body { padding-block: var(--s-5) var(--s-6); gap: var(--s-8); }
+  .hero-title { font-size: clamp(44px, 5.6vw, 72px); margin-bottom: var(--s-5); }
+  .hero-actions { margin-top: var(--s-6); }
+  .hero-privacy { margin-top: var(--s-5); }
+  .steps { padding: var(--s-5); }
+  .step-list { gap: var(--s-5); }
+  .drop-label { padding: var(--s-5) var(--s-4); }
+}
+
+@media (max-width: 1180px) {
+  .landing-top, .landing-body, .landing-foot { padding-inline: var(--s-7); }
+  .landing-body { grid-template-columns: minmax(420px, 1fr) minmax(0, 460px); gap: var(--s-8); }
+}
+@media (max-width: 900px) {
+  .landing-body {
+    grid-template-columns: 1fr;
+    gap: var(--s-7);
+    align-items: start;
+    padding-block: var(--s-7) var(--s-9);
+  }
+  .landing-top, .landing-body, .landing-foot { padding-inline: var(--s-4); }
+  .landing-foot { height: auto; flex-direction: column; align-items: flex-start; padding-block: var(--s-4); }
+  .foot-right { text-align: left; }
+}
