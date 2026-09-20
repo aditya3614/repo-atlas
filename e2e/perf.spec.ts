@@ -40,7 +40,7 @@ test('parses 100k commits inside the budget, with live progress', async ({ page 
     await page.waitForTimeout(120);
   }
 
-  await expect(page.getByText('The history, read and indexed')).toBeVisible({ timeout: 90_000 });
+  await expect(page.locator('.map-wrap')).toBeVisible({ timeout: 90_000 });
   const elapsed = Date.now() - started;
 
   const heapMb = await page.evaluate(() => {

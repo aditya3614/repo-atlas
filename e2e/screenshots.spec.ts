@@ -59,7 +59,7 @@ test('nothing is sent anywhere after load', async ({ page }) => {
   await page.getByRole('button', { name: 'Use your repo' }).click();
   await page.getByRole('button', { name: 'Copy' }).click();
   await page.getByRole('button', { name: 'Try the demo' }).click();
-  await expect(page.getByText('The history, read and indexed')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.map-wrap')).toBeVisible({ timeout: 15_000 });
   await page.waitForTimeout(1000);
 
   // Third-party requests are forbidden outright. Same-origin requests are
@@ -77,7 +77,7 @@ for (const theme of THEMES) {
       await page.addInitScript((t) => localStorage.setItem('atlas.theme', t), theme);
       await page.goto('/');
       await page.getByRole('button', { name: 'Try the demo' }).click();
-      await expect(page.getByText('The history, read and indexed')).toBeVisible({ timeout: 15_000 });
+      await expect(page.locator('.map-wrap')).toBeVisible({ timeout: 15_000 });
       await page.waitForTimeout(400);
       await page.screenshot({ path: `shots/overview-${theme}-${size.name}.png` });
     });

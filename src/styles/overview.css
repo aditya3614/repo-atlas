@@ -1,9 +1,7 @@
-.overview {
-  min-height: 100vh;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  background: var(--bg);
-}
+/*
+ * Chrome shared by every loaded view: the top bar, the stat tiles and the
+ * author bars. The map screen imports this and adds its own layout.
+ */
 
 /* ---- top bar: kept by the main view in M2 ---- */
 .top-bar {
@@ -16,7 +14,8 @@
   border-bottom: 1px solid var(--hairline);
 }
 
-.repo-line { display: flex; align-items: center; gap: var(--s-4); min-width: 0; }
+.repo-line { display: flex; align-items: center; gap: var(--s-4); min-width: 0; white-space: nowrap; }
+.repo-extra { display: flex; align-items: center; gap: var(--s-4); }
 .repo-name { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
 .repo-line .label { margin: 0; font-size: 13px; }
 .hair { width: 1px; height: 16px; background: var(--hairline-strong); }

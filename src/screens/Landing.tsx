@@ -8,6 +8,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { transition, usePrefersReducedMotion } from '../lib/motion';
 import { useUi } from '../store/ui';
 import { useAtlas } from '../store/atlas';
+import { useMap } from '../store/map';
 import { load } from '../lib/atlasClient';
 import { DEMO } from '../lib/demo';
 import '../styles/landing.css';
@@ -24,7 +25,11 @@ export function Landing() {
         { type: 'parse', blob, repo, gzip, ...(attribution ? { attribution } : {}) },
         {
           onProgress: useAtlas.getState().setProgress,
-          onDone: useAtlas.getState().setSummary,
+          onDone: (summary, tables) => {
+            useMap.getState().setTables(tables);
+            useMap.getState().setRoot('');
+            useAtlas.getState().setSummary(summary);
+          },
           onError: useAtlas.getState().setError,
           onCancelled: useAtlas.getState().reset,
         },

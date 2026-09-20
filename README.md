@@ -16,7 +16,10 @@ counts, never file contents.
 - **M1 — parse and model: done.** Streaming parser in a module worker, columnar
   data model, checkpoint index, loading and error screens, the bundled axios
   demo, and a seeded synthetic generator.
-- M2 the map · M3 time · M4 meaning · M5 finish: to come.
+- **M2 — the map: done.** Treemap layout in the worker, canvas renderer, five
+  colour modes with legends, hover, selection, and drill-down zoom with a
+  breadcrumb, at the latest commit.
+- M3 time · M4 meaning · M5 finish: to come.
 
 ## Running it
 
@@ -68,6 +71,16 @@ To show commit *k*, the state of every file (size, alive, path, heat) is
 restored from the nearest checkpoint at or before *k* and replayed forward.
 Scrubbing therefore never replays from the start.
 
+The map is laid out in the worker with `treemapSquarify` and shipped to the
+main thread as transferable typed arrays — geometry plus one array per
+attribute the renderer needs. Sibling order is by name, never by size, so a
+growing file never makes its neighbours jump. Cell areas use `size ^ 0.6` by
+default; raw line counts let one generated file swallow the picture.
+
+Drawing is two canvases: cells and folder borders on the base, hover, selection
+and glows on the overlay. Colours come from 64-entry lookup tables rebuilt only
+when the theme changes, so a frame does no interpolation and no allocation.
+
 ### Measured, on this machine (M-series MacBook Air, Chromium 1243)
 
 | | |
@@ -78,6 +91,10 @@ Scrubbing therefore never replays from the start.
 | Whole load in the browser, click to loaded | 406 ms (budget: 10 s) |
 | Demo, click to loaded | 171 ms (budget: 2 s to first map) |
 | Dataset + index footprint | 77 MB (budget: 500 MB) |
+| Map layout, 22,302 cells, in the worker | 18 ms |
+| Hover across a 22k-cell map | 16.7 ms median and p95, worst 16.8 ms |
+| Switching colour mode (full redraw of every cell) | 16.7 ms median and p95 |
+| The same at retina density, four times the pixels | 16.7 ms median and p95 |
 
 The footprint is computed from the typed arrays' actual `byteLength` plus a
 two-bytes-per-character estimate for the string tables. It is reported rather
@@ -128,6 +145,17 @@ directions. Recorded here as they are made.
   own. The interval doubles until the index fits 48 MB; on the synthetic dataset
   it settles at 1,024, so a scrub replays at most 1,023 commits (~9,400 change
   applications, well under one frame). On the demo it stays at 256.
+- **Hover has a three-pixel tolerance.** The layout leaves a 1px gap between
+  cells and a 15px label gutter above each folder, so a strict containment test
+  left dead seams criss-crossing the map. A miss now falls back to the nearest
+  cell within three pixels.
+- **Paper outlines hot cells instead of glowing them.** Additive blending needs
+  a dark ground; on white it turns a glow into a grey smudge. The dark theme
+  keeps the pre-rendered additive sprite, and Paper draws a 1.5px amber ring
+  around the same cells.
+- **Drilling into a folder is also reachable from the keyboard.** On the canvas
+  you click a folder's label strip, which nothing can tab to, so the Selection
+  panel renders the file's folder path as buttons that do the same thing.
 - **`heatAt` and `lastTouch` are one field.** Both are only ever written at a
   touch, with the same value, so the model keeps one and saves 8 bytes per file
   per checkpoint.

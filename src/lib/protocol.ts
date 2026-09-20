@@ -49,12 +49,74 @@ export interface Progress {
   totalBytes: number;
 }
 
+export type Weighting = 'balanced' | 'linear';
+
+export interface LayoutRequest {
+  /** Echoed back, so a stale reply can be dropped. */
+  id: number;
+  commit: number;
+  width: number;
+  height: number;
+  root: string;
+  weighting: Weighting;
+}
+
+/** One frame's worth of geometry and per-cell attributes. */
+export interface LayoutPayload {
+  id: number;
+  commit: number;
+  root: string;
+  width: number;
+  height: number;
+  rects: Float32Array;
+  fileIds: Uint32Array;
+  pathIds: Uint32Array;
+  size: Int32Array;
+  heat: Float32Array;
+  lastTouch: Float64Array;
+  commits: Uint32Array;
+  author: Uint32Array;
+  type: Uint8Array;
+  firstTime: Float64Array;
+  churn: Float32Array;
+  folderRects: Float32Array;
+  folderDepth: Uint8Array;
+  folderNames: string[];
+  folderPaths: string[];
+  hiddenCount: number;
+  aliveCount: number;
+  /** Worker-side milliseconds, for the performance pass. */
+  tookMs: number;
+}
+
+/** Sent once when a history finishes loading; the map needs it to draw. */
+export interface Tables {
+  paths: string[];
+  authorNames: string[];
+  authorEmails: string[];
+  authorBot: Uint8Array;
+  /** Palette slot per author id: 0-9 for the ten biggest, 10 for the rest. */
+  authorSlot: Uint8Array;
+  binaryWeight: number;
+  /** Largest lifetime churn in the history, so the churn ramp is stable. */
+  maxChurn: number;
+}
+
+export interface Sparkline {
+  fileId: number;
+  values: Float32Array;
+}
+
 export type ToWorker =
   | { type: 'parse'; blob: Blob; repo: string; gzip: boolean; attribution?: Summary['attribution'] }
-  | { type: 'cancel' };
+  | { type: 'cancel' }
+  | { type: 'layout'; request: LayoutRequest }
+  | { type: 'sparkline'; fileId: number; samples: number };
 
 export type FromWorker =
   | { type: 'progress'; progress: Progress }
-  | { type: 'done'; summary: Summary }
+  | { type: 'done'; summary: Summary; tables: Tables }
   | { type: 'error'; error: InputError }
-  | { type: 'cancelled' };
+  | { type: 'cancelled' }
+  | { type: 'layout'; layout: LayoutPayload }
+  | { type: 'sparkline'; sparkline: Sparkline };

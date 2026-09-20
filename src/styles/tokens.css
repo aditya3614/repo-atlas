@@ -107,6 +107,25 @@
   --heat-4: #ffd11a;
 
   --map-void: #0b0c0a;
+  --map-dust: #23261f;          /* cells too small to draw, as one flat fill */
+  --map-folder-line: rgba(250, 249, 245, 0.16);
+
+  /* Age: new files are lime, old files fade to a dry sand */
+  --age-new: #9fe870;
+  --age-mid: #6f7d53;
+  --age-old: #4a4a42;
+
+  /* Churn: its own hue so it is never mistaken for activity */
+  --churn-0: #20241f;
+  --churn-1: #4b7d7d;
+  --churn-2: #a0e1e1;
+
+  --type-code: #9fe870;
+  --type-tests: #a0e1e1;
+  --type-docs: #fadc65;
+  --type-config: #8c9ea3;
+  --type-assets: #c98bdb;
+
   --shadow-raised: rgba(0, 0, 0, 0.45) 0 8px 24px 0;
   --shadow-modal: rgba(0, 0, 0, 0.55) 0 16px 56px 0;
 }
@@ -138,13 +157,30 @@
   --focus: #163300;
   --focus-glow: rgba(159, 232, 112, 0.45);
 
-  --heat-0: #e8ece3;
-  --heat-1: #c7e3ab;
+  --heat-0: #dde3d6;
+  --heat-1: #c0dfa2;
   --heat-2: #9fe870;
   --heat-3: #fadc65;
   --heat-4: #e8a100;
 
-  --map-void: #f4f7f0;
+  --map-void: #eef2e8;
+  --map-dust: #d7e2cc;
+  --map-folder-line: rgba(22, 51, 0, 0.22);
+
+  --age-new: #4e9b23;
+  --age-mid: #9ab87c;
+  --age-old: #d8d8cd;
+
+  --churn-0: #e4ebe0;
+  --churn-1: #7fbcbc;
+  --churn-2: #1f6f6f;
+
+  --type-code: #4e9b23;
+  --type-tests: #1f6f6f;
+  --type-docs: #b98400;
+  --type-config: #62777d;
+  --type-assets: #8b4fa8;
+
   --shadow-raised: rgba(22, 51, 0, 0.08) 0 8px 24px 0;
   --shadow-modal: rgba(22, 51, 0, 0.15) 0 16px 56px 0;
 }

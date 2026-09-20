@@ -1,4 +1,4 @@
-import type { FromWorker, InputError, Progress, Summary, ToWorker } from './protocol';
+import type { FromWorker, InputError, Progress, Summary, Tables, ToWorker } from './protocol';
 
 /**
  * Main-thread handle on the worker. One worker for the life of the tab: it
@@ -7,7 +7,7 @@ import type { FromWorker, InputError, Progress, Summary, ToWorker } from './prot
 
 export interface LoadHandlers {
   onProgress: (p: Progress) => void;
-  onDone: (s: Summary) => void;
+  onDone: (s: Summary, tables: Tables) => void;
   onError: (e: InputError) => void;
   onCancelled: () => void;
 }
@@ -29,7 +29,7 @@ export function load(msg: Extract<ToWorker, { type: 'parse' }>, h: LoadHandlers)
     if (m.type === 'progress') h.onProgress(m.progress);
     else if (m.type === 'done') {
       w.removeEventListener('message', onMessage);
-      h.onDone(m.summary);
+      h.onDone(m.summary, m.tables);
     } else if (m.type === 'error') {
       w.removeEventListener('message', onMessage);
       h.onError(m.error);

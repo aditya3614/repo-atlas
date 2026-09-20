@@ -1,8 +1,10 @@
 /// <reference lib="webworker" />
-import { ChunkSplitter, LineParser, ParseError } from './parse';
+import { ChunkSplitter, LineParser, ParseError, BINARY_WEIGHT } from './parse';
 import { ModelBuilder, type Dataset } from './model';
 import { Checkpoints } from './state';
-import type { FromWorker, InputError, Progress, Summary, ToWorker } from '../lib/protocol';
+import { FileIndex } from './fileIndex';
+import { computeLayout, transferables } from './layout';
+import type { FromWorker, InputError, Progress, Summary, Tables, ToWorker } from '../lib/protocol';
 
 /**
  * Parsing, indexing and (from M2) layout all happen here, so a 100 MB file
@@ -19,11 +21,13 @@ let cancelled = false;
 export interface Loaded {
   dataset: Dataset;
   checkpoints: Checkpoints;
+  index: FileIndex;
   summary: Summary;
 }
 let loaded: Loaded | null = null;
 
-const post = (m: FromWorker) => (self as unknown as Worker).postMessage(m);
+const post = (m: FromWorker, transfer?: Transferable[]) =>
+  (self as unknown as Worker).postMessage(m, transfer ?? []);
 
 function toInputError(e: unknown): InputError {
   if (e instanceof ParseError) {
@@ -168,8 +172,41 @@ async function parse(msg: Extract<ToWorker, { type: 'parse' }>): Promise<void> {
     ...(msg.attribution ? { attribution: msg.attribution } : {}),
   };
 
-  loaded = { dataset, checkpoints, summary };
-  post({ type: 'done', summary });
+  const index = new FileIndex(dataset);
+  loaded = { dataset, checkpoints, index, summary };
+
+  const authorSlot = new Uint8Array(dataset.authors.names.length);
+  for (let a = 0; a < authorSlot.length; a++) {
+    authorSlot[a] = Math.min(10, index.authorRank[a]!);
+  }
+  const tables: Tables = {
+    paths: dataset.paths,
+    authorNames: dataset.authors.names,
+    authorEmails: dataset.authors.emails,
+    authorBot: dataset.authors.bot,
+    authorSlot,
+    binaryWeight: BINARY_WEIGHT,
+    maxChurn: maxChurn(dataset),
+  };
+  post({ type: 'done', summary, tables });
+}
+
+function maxChurn(d: Dataset): number {
+  let max = 0;
+  for (let f = 0; f < d.fileCount; f++) {
+    const c = d.files.adds[f]! + d.files.dels[f]!;
+    if (c > max) max = c;
+  }
+  return max;
+}
+
+function layout(request: Extract<ToWorker, { type: 'layout' }>['request']): void {
+  if (!loaded) return;
+  const started = performance.now();
+  const state = loaded.checkpoints.stateAt(request.commit);
+  const result = computeLayout(loaded.dataset, loaded.index, state, request);
+  const payload = { ...result, id: request.id, tookMs: performance.now() - started };
+  post({ type: 'layout', layout: payload }, transferables(result));
 }
 
 self.onmessage = (e: MessageEvent<ToWorker>) => {
@@ -182,6 +219,16 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
     cancelled = false;
     loaded = null;
     void parse(msg);
+    return;
+  }
+  if (msg.type === 'layout') {
+    layout(msg.request);
+    return;
+  }
+  if (msg.type === 'sparkline') {
+    if (!loaded) return;
+    const values = loaded.index.sizeHistory(msg.fileId, BINARY_WEIGHT, msg.samples);
+    post({ type: 'sparkline', sparkline: { fileId: msg.fileId, values } }, [values.buffer]);
   }
 };
 
