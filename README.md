@@ -1,266 +1,789 @@
 # Repo Atlas
 
-Turns a git history into an animated, explorable map of a codebase. Every file
-is a cell in a treemap sized by an estimate of its size; a time scrubber plays
-the history forward and back.
+**Repo Atlas turns the history of a software project into a map you can watch
+grow.**
 
-Everything runs in the browser tab. No backend, no accounts, no uploads, no
-analytics. After the page loads the app makes no network requests at all except
-for its own self-hosted font files. It only ever sees commit metadata and line
-counts, never file contents.
+Every file in the project becomes a rectangle. Rectangles that belong to the
+same folder sit together, like towns in a county. Then you press play, and the
+whole history runs in front of you: files appear, swell, get renamed, move to
+new folders and disappear, while a chart underneath shows who was working and
+when.
 
-## Status
+Everything happens inside your browser tab. Nothing is uploaded anywhere.
 
-- **M0 — scaffold and identity: done.** Tokens, both themes, landing screen with
-  the ambient map, command panel, drop zone, error and empty states.
-- **M1 — parse and model: done.** Streaming parser in a module worker, columnar
-  data model, checkpoint index, loading and error screens, the bundled axios
-  demo, and a seeded synthetic generator.
-- **M2 — the map: done.** Treemap layout in the worker, canvas renderer, five
-  colour modes with legends, hover, selection, and drill-down zoom with a
-  breadcrumb, at the latest commit.
-- **M3 — time: done.** Streamgraph scrubber, playback with speed and
-  quiet-period skipping, animated transitions for files appearing, moving and
-  disappearing, the commit ticker, and the keyboard transport. Co-change arcs
-  came forward from the stretch list on request.
-- **M4 — meaning: done.** Story facts, the Hotspots tab, single-owner folders,
-  the full Selection panel, fuzzy search, and a typography and contrast pass
-  across both themes.
-- M5 finish: to come.
+![The Repo Atlas map of the axios project: every file is a rectangle, grouped
+by folder and coloured by how recently it changed, with a streamgraph of
+contributors along the bottom](docs/map-night.png)
 
-## Running it
+---
 
-```bash
-npm install
-npm run dev       # http://localhost:5173
-npm test          # unit tests (vitest)
-npm run e2e       # end to end + screenshots into shots/ (Playwright)
-npm run build
-```
+## Table of contents
 
-`npm run e2e` builds and previews first. Set `PW_SYSTEM_CHROME=1` to run against
-the system Chrome when Playwright's browsers are not installed.
+- [If you have never used git](#if-you-have-never-used-git)
+- [What you can do with it](#what-you-can-do-with-it)
+  - [The map](#1-the-map)
+  - [Five ways to colour the map](#2-five-ways-to-colour-the-map)
+  - [Looking at one file](#3-looking-at-one-file)
+  - [Going into a folder](#4-going-into-a-folder)
+  - [Playing the history](#5-playing-the-history)
+  - [The chart at the bottom](#6-the-chart-at-the-bottom)
+  - [Connections between files](#7-connections-between-files)
+  - [Story](#8-story)
+  - [Hotspots and single-owner folders](#9-hotspots-and-single-owner-folders)
+  - [Search](#10-search)
+  - [Themes, motion and readability](#11-themes-motion-and-readability)
+- [Keyboard shortcuts](#keyboard-shortcuts)
+- [Using it on your own project](#using-it-on-your-own-project)
+- [Privacy](#privacy)
+- [Honest numbers: what is estimated and why](#honest-numbers-what-is-estimated-and-why)
+- [How it works inside](#how-it-works-inside)
+- [Speed](#speed)
+- [Running and testing it](#running-and-testing-it)
+- [Where things live in the code](#where-things-live-in-the-code)
+- [Decisions and limitations](#decisions-and-limitations)
 
-The performance tests need a synthetic history, which they generate on demand
-into `.cache/`. To make one by hand:
+---
 
-```bash
-node scripts/make-synthetic.mjs --commits=100000 --files=20000 .cache/synthetic.txt
-```
+## If you have never used git
 
-It is seeded, so the same arguments always produce the same bytes. It contains
-bursts, a long quiet gap, renames, directory-wide refactors, deletions, bot
-commits, rebased-looking dates, and one folder with a single owner.
+You can skip this if you already know what a commit is.
 
-## Input
+Software is built by editing text files. Almost every software team uses a tool
+called **git** to keep a record of those edits. The record works like a diary:
+
+- A **repository** (or "repo") is one project — all of its files, plus its
+  whole diary.
+- A **commit** is one entry in the diary. It says *who* changed the project,
+  *when*, a short sentence about *why* ("fix the login button"), and exactly
+  which files were touched.
+- For each file in a commit, git also records **how many lines were added and
+  how many were removed**. Not the text itself — just the counts.
+- A **branch merge** is when two people's parallel work is joined back together.
+
+That is all Repo Atlas reads: the list of commits, who made them, when, their
+one-line descriptions, and the line counts. It never sees a single line of
+actual code.
+
+From those ingredients you can learn a surprising amount: which parts of a
+project are busy, which are abandoned, who knows which area, and what the
+project looked like at any moment in its life.
+
+---
+
+## What you can do with it
+
+### 1. The map
+
+The main picture is a **treemap**. Imagine the whole screen is the project.
+It gets divided into rectangles, one per file. A bigger rectangle means a
+bigger file.
+
+- Files in the same folder are drawn next to each other inside a bordered
+  region, with the folder's name in small capitals along its top edge.
+- Folders inside folders nest, so you can see the shape of the project at a
+  glance — a large `docs` region, a dense `tests` region, and so on.
+- **File size is an estimate**, worked out from how many lines have been added
+  and removed over the file's life. Repo Atlas says so everywhere it shows a
+  size. See [Honest numbers](#honest-numbers-what-is-estimated-and-why).
+
+Two controls change how the rectangles are sized:
+
+| Setting | What it does |
+| --- | --- |
+| **Balanced** (default) | Big files are still bigger, but the difference is softened, so small files stay visible. |
+| **Linear** | Area is directly proportional to the estimated line count. One enormous generated file can swallow the picture. |
+
+When a project has more files than there are pixels, the tiniest ones cannot be
+drawn honestly. Rather than fake them, Repo Atlas merges them into their
+folder's background and tells you in the corner: *"4,235 files too small to draw
+at this size — zoom into a folder to see them."*
+
+### 2. Five ways to colour the map
+
+Press **1**–**5**, or use the buttons in the top bar. Each mode has a legend
+explaining what the colours mean, because colour is never the only way the
+information is available.
+
+| Mode | What the colour shows | Reading it |
+| --- | --- | --- |
+| **1 Activity** (default) | How recently and how often a file changed | Dark = quiet for a long time. Green = recently touched. Yellow and amber = changed a lot, very recently. |
+| **2 Author** | Who has added the most lines to each file | Ten colours for the ten biggest contributors, grey for everyone else. Bots are labelled "BOT" in the legend. |
+| **3 Age** | When the file first appeared | Bright = new. Faded = present since early on. |
+| **4 Churn** | Total lines added plus removed over the file's whole life | Pale = written once and left alone. Deep teal = rewritten again and again. |
+| **5 Type** | What kind of file it is, from its name | Code, Tests, Docs, Config, Assets. |
+
+Activity fades over time: a file that was edited constantly last year but not
+since will cool off as you move the playhead forward. This is why the map
+"breathes" during playback.
+
+### 3. Looking at one file
+
+**Hover** any rectangle and a small card follows your pointer with the file's
+full path, its estimated size, how many commits touched it, when it was last
+touched, and a tiny graph of how it grew.
+
+**Click** a rectangle to select it. The **Selection** panel on the right then
+shows:
+
+- the folder path (each part is a button that zooms the map into that folder),
+- the file's name and its kind (Code, Tests, …),
+- estimated size, number of commits, when it was created and last touched,
+- who created it,
+- **a graph of its size across its whole life**, with a marker showing where the
+  playhead currently sits,
+- **who wrote it** — every contributor, as bars, by lines added,
+- **the five biggest commits** that touched it; click one to jump the playhead
+  to that moment,
+- a **"single owner"** badge if effectively one person wrote its folder.
+
+### 4. Going into a folder
+
+Projects are too big to read at once, so you can zoom in.
+
+- **Click a folder's name label** on the map to fly into it. The map re-draws
+  using only that folder's files, so they get the whole screen.
+- A **breadcrumb** appears above the map (`axios / lib`). Click any part of it
+  to come back out.
+- Or use the folder path in the Selection panel, which does the same thing and
+  works with the keyboard.
+- **Esc** steps back out.
+
+There is deliberately no free-form panning or wheel zooming. You are always
+somewhere nameable, and you can always get back.
+
+### 5. Playing the history
+
+The controls at the bottom left run the history like a film.
+
+| Control | What it does |
+| --- | --- |
+| **Play / Pause** | Runs the history forward. At 1× the entire project history takes about 45 seconds, whether it covers one year or twenty. |
+| **Step back / forward** | Moves exactly one commit at a time. |
+| **0.5× / 1× / 2× / 4×** | Playback speed. |
+| **Skip quiet periods** | On by default. Long stretches with no commits are compressed, so you are not left staring at a frozen map during a three-month holiday. The label tells you how many such gaps exist. |
+
+While it plays, the map animates rather than jumping:
+
+- a **new file** grows into place with a brief flash,
+- a file that is **deleted** shrinks and fades to an empty outline,
+- a file that is **renamed or moved to another folder** slides across to its new
+  home instead of vanishing and reappearing.
+
+A **ticker** in the bottom-left corner of the map fades commit messages in and
+out as they happen, with a coloured dot for the author. At high speed it samples
+at most eight a second, because faster than that is unreadable anyway.
+
+### 6. The chart at the bottom
+
+The flowing coloured ribbon along the bottom is a **streamgraph**. Left to right
+is time, from the project's first commit to its last. The thickness of the band
+at any point is how many commits happened that week. Each colour is one of the
+seven busiest people, with everyone else pooled into a grey band.
+
+It is also the **scrubber**:
+
+- **Click** anywhere on it to jump to that moment.
+- **Drag** to scrub through history; the map follows continuously.
+- **Hover** to read the date and the number of commits that week.
+- Year markers run along the bottom.
+
+The shape tells its own story: you can see when a project was a solo effort,
+when a team arrived, when someone left, and when everything went quiet.
+
+### 7. Connections between files
+
+![Arcs drawn between files that are usually changed in the same commit](docs/connections.png)
+
+Click **Connections** (or press **c**) to draw arcs between files that tend to
+be changed *in the same commit*. If two files always get edited together, they
+are coupled in practice, whatever the folder structure says.
+
+- With a file selected, only that file's connections are drawn.
+- With nothing selected, the strongest connections in the whole project are
+  drawn.
+- Thicker and brighter arcs mean the pair changed together more often.
+
+A caption states exactly what was counted, for example: *"From 856 commits that
+touched between 2 and 20 files; the strongest 45 pairs are drawn."* Commits that
+touch more than 20 files are deliberately ignored — a sweeping rename relates
+everything to everything and would tell you nothing.
+
+### 8. Story
+
+The **Story** tab writes six to nine plain-English sentences about the project,
+each one a card you can click to jump to the moment it describes. For the
+bundled demo they read like this:
+
+> **Busiest year** — 2026 was the busiest year, with 386 commits.
+>
+> **Longest quiet spell** — Nothing was committed for 139 days, between
+> 17 Sep 2018 and 4 Feb 2019.
+>
+> **Single owner** — tests is effectively one person's work: Jay wrote 86% of
+> its 59k lines across 169 files, with 86 others accounting for the rest.
+
+The facts cover: the busiest year, the file that churns hardest for its size, a
+folder with a single owner, the largest single commit, the longest silence, who
+owns the biggest folder, the largest the project ever was, the very first
+commit, and the busiest single week.
+
+These are generated from the data, not written by hand, and every sentence
+states the measurement behind it. See
+[the accuracy check](#the-demos-story-cards-checked-by-hand).
+
+### 9. Hotspots and single-owner folders
+
+![The Hotspots tab in the Paper theme, ranking the files changed most in the last twelve months, each with a plain-English explanation](docs/hotspots.png)
+
+The **Hotspots** tab ranks the files that have been changed most in the recent
+past — the last quarter of the project's life, or the last twelve months,
+whichever is shorter.
+
+Each entry explains itself in words, for example: *"changed 52 times in 12
+months by 22 people, about 8.4k lines"*. Files that many people keep changing
+are usually where the difficulty lives.
+
+Below that is a list of **single-owner folders**. A folder is single-owner when
+one person wrote 80% of the lines ever added to it — the "bus factor", as in
+*how many people would have to be hit by a bus before the knowledge is gone*. A
+bus factor of 1 is a risk worth knowing about. Bots are not counted as people.
+
+### 10. Search
+
+Press **/** and type part of a path. Matching is fuzzy, so `adhttp` finds
+`lib/adapters/http.js`. Matching files stay bright and everything else on the
+map dims, so you keep the shape of the project while you look. Press **Enter**
+to select the best match, **Esc** to close.
+
+### 11. Themes, motion and readability
+
+![The same map in the Paper theme](docs/map-paper.png)
+
+- **Night** (default) and **Paper** themes, switchable in the top bar and
+  remembered for next time.
+- If your system is set to **reduce motion**, the animations are replaced with
+  simple crossfades, the landing page's background stops moving, and playback
+  jumps rather than sliding.
+- Text contrast is checked automatically against the accessibility standard of
+  4.5:1 in both themes, by a test that runs with the rest of the suite.
+- The map itself carries a written description for screen readers.
+
+---
+
+## Keyboard shortcuts
+
+| Key | Action |
+| --- | --- |
+| **Space** | Play or pause |
+| **←** / **→** | Step one commit back or forward |
+| **Shift + ←** / **→** | Jump ten commits |
+| **Home** / **End** | Go to the first or last commit |
+| **[** / **]** | Slower or faster |
+| **1**–**5** | Colour the map by Activity, Author, Age, Churn, Type |
+| **c** | Show or hide the connection arcs |
+| **/** | Search for a file |
+| **Esc** | Clear the selection, then zoom out of a folder |
+
+Every control is also reachable with **Tab**, and gets a visible focus ring.
+
+---
+
+## Using it on your own project
+
+Repo Atlas never reads your project directly. You produce one text file from
+your own machine and drop it in.
+
+**Step 1.** Open a terminal in your project's folder and run:
 
 ```bash
 git -c core.quotepath=false log --reverse --no-merges -M --numstat \
   --format='@@@%n%H%n%an%n%ae%n%aI%n%s' > atlas.txt
 ```
 
-Drop `atlas.txt` on the landing screen, or paste the output directly. Both go
-through the same streaming path.
+**Step 2.** Drop the resulting `atlas.txt` onto the Repo Atlas landing page, or
+paste its contents, or pick it with the file chooser. A `.gz` compressed file
+works too.
 
-## How it works
+You do not have to understand the command, but here is what each part does:
 
-The worker streams the file through `TextDecoderStream` and a line parser that
-reads commits **by position**, never by splitting on a separator — a commit
-subject may contain tabs, pipes, quotes or the literal string `@@@`. Partial
-lines are carried across chunk boundaries, so the result does not depend on how
-the file arrives.
-
-The history is stored columnar: one typed array per field, plus the changes in
-compressed-sparse-row form. There is no object per change; a 100k-commit history
-is ~916k changes and objects for those would not fit the budget.
-
-To show commit *k*, the state of every file (size, alive, path, heat) is
-restored from the nearest checkpoint at or before *k* and replayed forward.
-Scrubbing therefore never replays from the start.
-
-The map is laid out in the worker with `treemapSquarify` and shipped to the
-main thread as transferable typed arrays — geometry plus one array per
-attribute the renderer needs. Sibling order is by name, never by size, so a
-growing file never makes its neighbours jump. Cell areas use `size ^ 0.6` by
-default; raw line counts let one generated file swallow the picture.
-
-Drawing is two canvases: cells and folder borders on the base, hover, selection
-and glows on the overlay. Colours come from 64-entry lookup tables rebuilt only
-when the theme changes, so a frame does no interpolation and no allocation.
-
-Playback keeps its position, speed and commit index in a plain mutable object
-that the frame loop reads directly. React subscribes to it separately and is
-told at about eleven times a second — enough for a date readout, far too slow
-to drive a map. Layouts are requested one at a time as the commit advances, and
-the main thread tweens cell to cell between them: a file that survives slides
-and resizes, one that is new grows in with a flash, one that has gone collapses
-to an outline.
-
-Story facts, hotspots and folder ownership are recomputed in the worker when
-the playhead settles, never while it is moving. Every sentence states the window
-it was measured over: a hotspot says how many commits, how many people and over
-how many months, and a single-owner claim gives the share it is based on.
-
-### Colour and type
-
-Text contrast is enforced by a test, not by eye. `src/styles/contrast.test.ts`
-reads the tokens out of the stylesheet and checks every pairing the UI uses in
-both themes against the 4.5:1 requirement in section 11. It found three real
-failures, all now fixed: Paper's faint text on a tinted surface, and two ramp
-stops that sat in a mid-tone band where neither black nor white text works.
-
-Map labels sit directly on a cell whose colour is data, so no single ink can
-work: a grey that reads on a dark cell vanishes on a hot yellow one. Each cell
-now picks its ink from its own luminance, and the same test checks both inks
-against every cell colour in both themes.
-
-Three faces, each with a job: **Inter** for the interface, **Source Code Pro**
-with tabular figures for paths and numbers, and **Newsreader** for the story
-sentences, which are prose rather than chrome.
-
-### Measured, on this machine (M-series MacBook Air, Chromium 1243)
-
-| | |
+| Part | Meaning |
 | --- | --- |
-| Synthetic input | 46.9 MB, 100,000 commits, 22,512 files, 915,810 changes |
-| Parse | 285–306 ms (Node, verified separately from the browser) |
-| Checkpoint index | 25 ms |
-| Whole load in the browser, click to loaded | 406 ms (budget: 10 s) |
-| Demo, click to loaded | 171 ms (budget: 2 s to first map) |
-| Dataset + index footprint | 77 MB (budget: 500 MB) |
-| Map layout, 22,302 cells, in the worker | 18 ms |
-| Hover across a 22k-cell map | 16.7 ms median and p95, worst 16.8 ms |
-| Switching colour mode (full redraw of every cell) | 16.7 ms median and p95 |
-| The same at retina density, four times the pixels | 16.7 ms median and p95 |
-| Playing the synthetic history at 4x | 16.7 ms median and p95, worst 16.8 ms |
-| Dragging the playhead across the whole timeline | 16.7 ms median and p95 |
-| Ownership, hotspots and story facts over 100k commits | ~200 ms in total |
+| `log` | Print the project's diary. |
+| `--reverse` | Oldest entry first, so the story runs forwards. |
+| `--no-merges` | Skip the bookkeeping entries that only join two lines of work. |
+| `-M` | Detect renames, so a file that moves keeps its identity instead of looking like a deletion plus a new file. |
+| `--numstat` | Add the "lines added / lines removed" counts per file. |
+| `--format=…` | Print who, when and the one-line description, separated by `@@@` markers. |
+| `-c core.quotepath=false` | Keep non-English filenames readable. |
+| `> atlas.txt` | Save it to a file instead of printing it. |
 
-The footprint is computed from the typed arrays' actual `byteLength` plus a
-two-bytes-per-character estimate for the string tables. It is reported rather
-than guessed because `performance.memory` on the main thread cannot see the
-worker's heap, where the dataset lives.
+The landing page shows this command with a copy button, and a second version
+that prints to the terminal instead of saving a file.
 
-## Decisions
+**If you just want to look around**, press **Try the demo**. It loads the real
+history of [axios](https://github.com/axios/axios), an MIT-licensed open-source
+project with 1,987 commits between 2014 and 2026.
 
-Points where the brief left room, or where two instructions pulled in different
-directions. Recorded here as they are made.
+---
 
-- **Theme comes from the Wise design system, not from the brief's §8 palette.**
-  The brief specifies a warm cartography palette (terracotta, sage, sand on
-  `#141413`); the instruction that came with it said to take the theme from the
-  attached Wise design file. Wise wins on colour and type; the brief's
-  *structure* is kept intact — two named themes, and accents that hold one fixed
-  meaning each:
+## Privacy
 
-  | role | token | Wise colour |
-  | --- | --- | --- |
-  | new / added | `--accent` | Lime `#9FE870` (Night) / Deep Forest `#163300` (Paper) |
-  | selection / info | `--info` | Cyan `#A0E1E1` |
-  | deleted / removed | `--danger` | Error red `#CB272F` |
-  | recent activity | `--heat-0…4` | charcoal → lime → warm yellow → `#FFD11A` |
+This is the part worth being precise about.
 
-  Night stays the default, as the brief asks, because heat glows read better on
-  a dark ground. Paper is Wise's own white-on-forest-green world.
-- **Wise Sans is replaced by Inter 900.** Wise Sans is not distributable, and
-  the Wise file names Inter as the primary family. Display text uses Inter 900
-  with tight leading and negative tracking, which is the closest honest stand-in.
-  Newsreader (the brief's serif for story text) is dropped for the same reason:
-  the Wise system is single-family, and mixing a serif in would read as a
-  different product.
-- **Source Code Pro is kept** for paths and numbers, with `tabular-nums`, since
-  the Wise file has no monospace face and columns of digits must not jitter.
-- **The heat ramp is a 64-entry lookup table**, rebuilt on theme change, so no
-  frame allocates a colour interpolator.
-- **Same-origin font files are the one allowed request after load.** The privacy
-  test asserts exactly that and fails on anything else.
-- **The demo ships as plain text, not gzipped.** Static servers set
-  `Content-Encoding: gzip` on a `.gz` file, the browser then decompresses it
-  transparently, and the worker's own gunzip is handed plain text and fails.
-  Transport compression handles the wire anyway. The worker's `DecompressionStream`
-  path is still there for `.gz` files people drop themselves.
-- **Checkpoints are every 256 commits, widened when that would not fit memory.**
-  The brief asks for 256. At 20,000 files, 100,000 commits, that would be 391
-  snapshots of 420 KB each — about 230 MB, which breaks the 500 MB budget on its
-  own. The interval doubles until the index fits 48 MB; on the synthetic dataset
-  it settles at 1,024, so a scrub replays at most 1,023 commits (~9,400 change
-  applications, well under one frame). On the demo it stays at 256.
-- **Hover has a three-pixel tolerance.** The layout leaves a 1px gap between
-  cells and a 15px label gutter above each folder, so a strict containment test
-  left dead seams criss-crossing the map. A miss now falls back to the nearest
-  cell within three pixels.
-- **Paper outlines hot cells instead of glowing them.** Additive blending needs
-  a dark ground; on white it turns a glow into a grey smudge. The dark theme
-  keeps the pre-rendered additive sprite, and Paper draws a 1.5px amber ring
-  around the same cells.
-- **Drilling into a folder is also reachable from the keyboard.** On the canvas
-  you click a folder's label strip, which nothing can tab to, so the Selection
-  panel renders the file's folder path as buttons that do the same thing.
-- **The streamgraph's wiggle baseline is de-drifted.** `stackOffsetWiggle`
-  minimises slope changes but its baseline random-walks: over 632 weeks of the
-  demo it wandered 224 units while the ribbon was only 29 thick, so fitting the
-  whole range left a thread on an empty canvas. A heavily smoothed centre is
-  subtracted per column, which removes the long-range drift and keeps the local
-  wiggle the brief asks for.
-- **Co-change ignores sweeping commits.** Counting every pair in every commit is
-  quadratic in the commit's size, and a 400-file refactor would contribute
-  80,000 pairs that mean nothing more than "these all moved at once". Only
-  commits touching between 2 and 20 files are counted, over the 600 busiest
-  files, and the caption states how many commits that was.
-- **`heatAt` and `lastTouch` are one field.** Both are only ever written at a
-  touch, with the same value, so the model keeps one and saves 8 bytes per file
-  per checkpoint.
+- Repo Atlas is a **static web page**. There is no server, no account, no
+  database and no analytics.
+- Your history file is read **inside your browser tab**. It is never uploaded.
+- After the page has loaded, the app makes **no third-party network requests of
+  any kind**. The only requests it makes are for its own files, from the same
+  address it was loaded from: fonts, code, and the demo history if you ask for
+  it.
+- This is enforced by an automated test that fails the build if any request
+  goes anywhere else.
+- The only thing stored on your machine is your Night/Paper preference.
+- Because the input is only commit metadata and line counts, **Repo Atlas never
+  sees your source code at all** — not even if you wanted it to.
 
-## The demo's story cards, checked by hand
+---
 
-Section 13 asks for these to be spot-checked against `git log`. Against the
-axios clone, on 21 September 2026:
+## Honest numbers: what is estimated and why
+
+git's `--numstat` gives line counts, not file sizes. So:
+
+- **Every file size is an estimate.** It starts at the number of lines the
+  file's first commit added, then adds and subtracts as later commits add and
+  remove lines. It never goes below zero. Anywhere the interface shows a size it
+  says "estimated" or shows a `~`.
+- **Binary files** — images, fonts, compiled artefacts — have no line counts at
+  all. git just prints `-`. They are given a constant weight of 30 so they still
+  appear on the map, and they are marked as Assets.
+- **A deleted binary file cannot be detected.** Because a binary change carries
+  no counts, removing one looks exactly like editing one. Those files stay on
+  the map.
+- **Deletions that only happen inside a merge are invisible**, because the
+  recommended command skips merges.
+
+How wrong does that make it? It is measured rather than guessed. For the
+bundled axios demo, at the latest commit:
+
+- every one of the 473 files git actually reports is present on the map,
+- **7 extra** files are shown that git no longer has — one deleted binary, and
+  six whose deletion only exists inside a merge,
+- an overshoot of about **1.5%**.
+
+That check runs as a test (`src/worker/demo.test.ts`), so a real regression
+would be caught rather than quietly accepted.
+
+### The demo's story cards, checked by hand
+
+Each was verified against the axios repository directly:
 
 | Card | Repo Atlas | git |
 | --- | --- | --- |
 | Busiest year | 2026, 386 commits | 386 |
 | First commit | 18 Aug 2014, Matt Zabriskie, "first commit" | same |
-| Largest commit | ~52k lines, "refactor: bump minors package versions (#7356)", Jay | 51,771 lines, same commit |
+| Largest commit | ~52k lines, "refactor: bump minors package versions (#7356)" | 51,771 lines, same commit |
 | Longest quiet spell | 139 days, 17 Sep 2018 to 4 Feb 2019 | same |
 | Busiest week | 29 commits, week of 2 Jun 2022 | same |
 
-Two of these needed care rather than just a check:
+Two of these needed care:
 
-- **The longest gap is 139 days, not the 165 that git's linear order suggests.**
-  Thirteen commits in axios carry an author date earlier than the commit before
-  them, which is what a rebase leaves behind. Sorting the author dates gives
-  139 days, and that is the number a person would verify. The running-maximum
-  time axis agrees with it.
-- **The busiest week excludes bots**, exactly as the streamgraph does — 29
-  rather than the 33 that counting dependabot would give. The sentence now says
-  so, because the same week is the busiest either way only by coincidence.
+- **The longest gap is 139 days, not the 165 that git's default ordering
+  suggests.** Thirteen axios commits carry a timestamp earlier than the commit
+  before them — normal after a rebase, where history is replayed onto a new
+  base. Sorting the dates gives 139 days, which is what a person checking by
+  hand would find.
+- **The busiest week excludes bots**, exactly as the streamgraph does: 29 rather
+  than the 33 you get by counting automated dependency updates. The sentence
+  says so.
 
-Two wordings were wrong before they were checked, and were rewritten to say what
-was actually measured. "Everything in tests was written by Jay" became "Jay
-wrote 86% of its 59k lines … with 86 others accounting for the rest", which is
-what a bus factor of 1 under the 80% rule actually means. And "rewritten about
-328 times over" turned out to be churn divided by a file our own size estimate
-had left at a handful of lines; it now reports the churn and the size separately,
-and only for files of at least 80 lines.
+---
 
-## Honest numbers
+## How it works inside
 
-File size is estimated from `--numstat` line counts, never measured. Binary
-files have no line counts at all and are given a constant weight of 30. Anywhere
-the UI shows a size it says so.
+### The shape of the program
 
-The live file set is an estimate too, and its error is measurable. Against the
-bundled axios demo, the model's live files at the last commit were compared with
-`git ls-files`:
+```
+   your browser tab
+   ┌──────────────────────────────────────────────────────────────┐
+   │  MAIN THREAD                        │  WEB WORKER            │
+   │  ─────────────                      │  ──────────            │
+   │  React: chrome, panels, buttons     │  streaming parser      │
+   │  Canvas renderer: the map           │  the data model        │
+   │  Canvas renderer: the streamgraph   │  checkpoint index      │
+   │  pointer, keyboard, playback clock  │  treemap layout        │
+   │                                     │  hotspots, ownership,  │
+   │        ── messages ──▶              │  story facts, search   │
+   │        ◀── typed arrays ──          │                        │
+   └──────────────────────────────────────────────────────────────┘
+```
 
-- every one of the 473 files git reports is present;
-- 7 extra files are still shown, an overshoot of about 1.5%.
+A **web worker** is a second thread. Everything slow happens there, so the
+interface never freezes: you can keep scrolling and clicking while a 47 MB
+history is being read.
 
-Those 7 break down as one deleted binary — a binary row carries no line counts,
-so its removal is indistinguishable from an edit — and six files whose deletion
-exists only inside a merge commit, which the brief's `--no-merges` log cannot
-see. Both are properties of the input format, not of the model, and
-`src/worker/demo.test.ts` pins the numbers so a real regression would show up.
+The two sides exchange messages. Geometry comes back as **transferable typed
+arrays** — blocks of raw numbers whose ownership moves between threads without
+being copied.
 
-These demo figures were each checked against git by hand and match exactly:
-1,987 commits, 676 author identities, 214 bot commits, 2014–2026.
+### Reading the file
+
+`src/worker/parse.ts`
+
+The file is read as a **stream**: a chunk at a time, decoded, and fed to a small
+state machine. A 100 MB file is never held in memory as one string, and progress
+("Read 48,213 commits, 12,904 files") can be reported as it goes.
+
+Each commit is exactly six lines — a `@@@` marker, then hash, author name,
+email, date, description — and the parser counts positions rather than splitting
+on a separator. That matters because a commit description can contain anything,
+including tabs, quote marks, and the literal text `@@@`.
+
+Chunks do not arrive on tidy line boundaries, so the last partial line is held
+back and joined to the front of the next chunk. Tests feed the same fixture in
+chunks of 1, 2, 3, 7, 64 and 997 bytes and require identical results.
+
+**Renames** are the fiddly part. git writes them in five different shapes, all
+confirmed against real git output:
+
+```
+src/core/{engine.js => runner.js}      a rename inside a folder
+{src/core => lib/kernel}/runner.js     a folder that moved
+pkg/{ => sub}/thing.txt                a file that moved into a folder
+pkg/{sub => }/thing.txt                a file that moved out of one
+sub/a.txt => a.txt                     no shared prefix at all
+```
+
+`src/worker/paths.ts` reconstructs the old and new path for each. The file keeps
+its identity across the rename, which is what lets the map *slide* a file to its
+new home instead of killing one rectangle and birthing another.
+
+If the file ever looks wrong, the error names the line number, prints the
+offending text, and suggests a fix.
+
+### Storing the history
+
+`src/worker/model.ts`
+
+A 100,000-commit project contains roughly 916,000 individual file changes.
+One JavaScript object per change would cost more memory than the entire budget,
+so the history is stored **columnar**: one long array per field.
+
+```
+commit:        0        1        2        3     …
+time:      [ 1.6e12, 1.6e12, 1.6e12, 1.6e12, … ]   when
+author:    [      0,      3,      0,      7, … ]   who
+offsets:   [      0,      3,      5,      9, … ]   where its changes start
+                    ╲       ╲
+files:     [ 12, 40, 7,   3, 9,   … ]              which file
+adds:      [ 10,  4, 0,  22, 1,   … ]              lines added
+```
+
+The `offsets` array is the trick: commit 1's changes are everything between
+positions 3 and 5 in the lower arrays. This layout is called **compressed sparse
+row**, and it means walking the whole history is a straight march through memory
+rather than chasing pointers.
+
+People are identified by lower-cased email address, so `Ada@Example.com` and
+`ada@example.com` are one person; the display name is whichever spelling they
+used most. Accounts matching `[bot]`, `dependabot`, `renovate` or
+`github-actions` are flagged as bots.
+
+### Showing any moment instantly
+
+`src/worker/state.ts`
+
+To draw the map at commit 40,000, you need to know every file's size and
+location at that exact moment — which normally means replaying 40,000 commits.
+That is far too slow to do while dragging a scrubber.
+
+So the worker takes **checkpoints**: a complete snapshot of every file's state,
+saved periodically while indexing. To reach any commit it restores the nearest
+earlier snapshot and replays only the handful of commits after it.
+
+The brief called for a snapshot every 256 commits. On the largest test project
+that would be 391 snapshots of 420 KB each — about 230 MB, blowing the memory
+budget on its own. So the interval widens until the index fits in 48 MB: 1,024
+commits on the big test project, still 256 on the demo. Worst case, a scrub
+replays about 9,400 file changes, which is well inside a single frame.
+
+A test proves this is not a shortcut: at forty randomly chosen commits, the
+checkpoint-restored state is compared field by field against a full replay from
+the beginning, and must match exactly.
+
+### "How hot is this file?"
+
+Activity is modelled as heat that decays. Each time a file is touched:
+
+```
+heat = (previous heat, decayed since it was last touched) + 1
+```
+
+and when drawing, the heat is decayed again from the last touch up to the moment
+on screen. The decay constant is 5% of the project's total lifetime, with a
+floor of seven days so that a project one day old does not divide by nearly
+zero. The effect is that busy files glow and then cool, at a rate that suits the
+project's own pace.
+
+### Arranging the rectangles
+
+`src/worker/layout.ts`
+
+The layout uses a **squarified treemap**, which subdivides a rectangle so the
+pieces stay close to square and therefore readable.
+
+Two decisions matter:
+
+- **Siblings are ordered by name, never by size.** Sorting by size looks tidier
+  in a still image, but during playback every rectangle would leap across the
+  screen whenever a neighbour grew. Fixed order means the map is *stable*, and
+  movement always means something real happened.
+- **Area uses size^0.6 by default.** Raw line counts let one machine-generated
+  file swallow the picture. The exponent compresses the extremes while keeping
+  the ordering truthful. "Linear" turns it off.
+
+Folders get 1 pixel between cells, 2 pixels of margin, and a 15-pixel strip
+along the top for the folder's name — but only when the folder is big enough for
+the name to fit.
+
+### Drawing
+
+`src/map/render.ts`, `src/map/MapController.ts`
+
+The map is drawn on **two stacked canvases**: a base layer for the cells and
+folder borders, and an overlay for hover, selection, glows and arcs. Hovering
+only repaints the small overlay.
+
+In the drawing loop there are no memory allocations at all. Colours are resolved
+through **lookup tables** — 64 pre-computed shades per ramp, rebuilt only when
+the theme changes — so colouring a cell is an array read. The glow around hot
+files is a **pre-rendered sprite** drawn with additive blending, rather than the
+canvas blur feature, which is far too slow at this scale.
+
+Cells smaller than 0.75 pixels are skipped and their folder's background shows
+through instead, which is why the "too small to draw" note exists.
+
+**Readable labels.** A file's label sits directly on its cell, and that cell's
+colour is data — it could be near-black or bright yellow. A single grey cannot
+work on both. Each cell therefore chooses dark or light ink based on its own
+brightness, and a test checks both inks against all 27 possible cell colours in
+both themes.
+
+**Hit testing** uses a grid of buckets, so finding what is under the pointer
+checks a handful of rectangles rather than 20,000. It also allows a three-pixel
+tolerance, because the one-pixel gaps between cells would otherwise leave dead
+seams criss-crossing the map.
+
+### Making time move
+
+`src/map/clock.ts`
+
+Playback position, speed and current commit live in a **plain mutable object**,
+not in React state. The animation loop reads it directly sixty times a second.
+React subscribes separately and is notified about eleven times a second — plenty
+for a date readout, far too slow to drive a map.
+
+The loop **stops completely** when nothing is moving, so an idle map costs no
+battery.
+
+**Skipping quiet periods** works by building two timelines when the history is
+indexed: one in real time, and one where any gap longer than a cap counts only
+as the cap. The cap is twelve times the project's typical gap between commits,
+clamped between an hour and three days. Moving the playhead is a binary search
+into whichever timeline is active.
+
+**Animating between two moments.** The layout for a new commit arrives from the
+worker as a fresh set of rectangles. The main thread matches the two sets by
+file identity and animates between them: files in both slide and resize, files
+only in the new one grow in, files only in the old one collapse to an outline.
+One layout request is in flight at a time, so the worker never builds a backlog,
+and the animation's duration adapts to how fast layouts are actually arriving.
+
+### The streamgraph
+
+`src/components/Streamgraph.tsx`
+
+Commits are counted per week per author, then stacked with d3's "wiggle" offset,
+which minimises how much the bands slope and gives the shape its flowing look.
+
+Wiggle has a catch: its baseline wanders. Over the demo's 632 weeks it drifted
+224 units while the ribbon was only 29 thick, so fitting the whole range left a
+hairline on an empty canvas. The fix is to subtract a heavily smoothed centre
+line from each column, which removes the long-range drift and keeps the local
+wiggle. This is the difference between the chart being useless and being the
+best summary on the screen.
+
+### Files that change together
+
+`src/worker/cochange.ts`
+
+For each commit, every pair of files it touched gets a point. Two limits keep
+this honest and affordable: commits touching more than 20 files are skipped
+(quadratic cost, no meaning), and only the 600 busiest files are considered.
+The strongest pairs are drawn as curved arcs.
+
+### Hotspots, ownership and the story
+
+`src/worker/meaning.ts`
+
+- **Hotspot score** = churn in the recent window × log(1 + number of distinct
+  people in that window). Both ingredients matter: lines alone favours generated
+  files, people alone favours trivia.
+- **Bus factor** of a folder = the smallest number of non-bot people whose
+  combined line contributions reach 80% of that folder's total. Lines are
+  attributed to every folder above a file, so `src`, `src/core` and
+  `src/core/internal` each get their own figure.
+- **Story facts** are template sentences filled from measured values, each with
+  a commit to jump to. They are recomputed when the playhead settles, never
+  while it is moving.
+
+The whole meaning pass costs about 200 ms on a 100,000-commit history.
+
+### Search
+
+Fuzzy matching: every character of the query must appear in order. Runs of
+adjacent matches score higher, and a match inside the file's name beats one
+buried in a directory. It runs in the worker against the files that exist at the
+current moment in the history.
+
+---
+
+## Speed
+
+Measured on an M-series MacBook Air in Chromium, against a generated test
+project of **100,000 commits, 22,512 files and 915,810 file changes** (47 MB).
+
+| | Result | Budget |
+| --- | --- | --- |
+| Reading and indexing the whole history | **285–306 ms** | under 10 s |
+| Click to first map, demo project | **171 ms** | under 2 s |
+| Click to first map, 47 MB test project | **398 ms** | — |
+| Building one map layout of 22,302 cells | **18 ms** | — |
+| Moving the pointer across the map | **16.7 ms** median and 95th percentile | 16.7 ms = 60fps |
+| Switching colour mode (repaints every cell) | **16.7 ms** median and 95th percentile | 60fps |
+| The same on a retina display, four times the pixels | **16.7 ms** | 60fps |
+| Playing the history at 4× | **16.7 ms** median and 95th percentile | 60fps |
+| Dragging the playhead across the whole timeline | **16.7 ms** median and 95th percentile | 60fps |
+| Memory held by the indexed history | **77 MB** | under 500 MB |
+
+No dropped frames in any of these. The memory figure is computed from the actual
+byte lengths of the arrays, because the browser's own memory reading cannot see
+inside a worker, where the data lives.
+
+---
+
+## Running and testing it
+
+```bash
+npm install
+npm run dev        # development server at http://localhost:5173
+npm run build      # type-check and build for production
+npm test           # 104 unit tests (vitest)
+npm run e2e        # 36 browser tests and screenshots (Playwright)
+```
+
+`npm run e2e` builds and serves the app first. Screenshots land in `shots/`.
+Set `PW_SYSTEM_CHROME=1` to use the Chrome already on your machine.
+
+To create a large synthetic project for the performance tests:
+
+```bash
+node scripts/make-synthetic.mjs --commits=100000 --files=20000 .cache/synthetic.txt
+```
+
+It is seeded, so the same arguments always produce byte-identical output. It
+deliberately includes bursts of activity, a long silence, renames, folder-wide
+restructures, deletions, automated bot commits, rebased timestamps, and one
+folder with a single owner.
+
+### What the tests cover
+
+- **Parsing**: every rename shape, binary files, non-English paths, empty
+  commits, malformed input with line numbers, chunk-boundary splits, CRLF and
+  byte-order marks.
+- **Identity**: a file keeps one identity across a chain of renames.
+- **Checkpoints**: restored state equals a full replay, at forty random commits.
+- **Heat, bus factor, hotspot ranking, story-fact generation, search.**
+- **Layout**: cells never overlap, order does not change when a file grows,
+  drilling into a folder excludes everything else.
+- **Contrast**: every text-on-background pairing in both themes reaches 4.5:1.
+- **Against real data**: the demo's commit count, contributor count, bot count
+  and live file set are compared to what git reports.
+- **In the browser**: loading, playing, scrubbing, selecting, drilling, search,
+  colour modes, themes, reduced motion, cancelling a load, no console errors,
+  and no requests leaving the page.
+
+---
+
+## Where things live in the code
+
+```
+src/
+  worker/          everything that runs off the main thread
+    parse.ts         streaming reader for the git log format
+    paths.ts         the five rename shapes
+    model.ts         columnar storage of the history
+    state.ts         file state at a commit, and the checkpoint index
+    fileIndex.ts     per-file lookups, dominant author, file kinds
+    layout.ts        the treemap
+    timeline.ts      weekly bins and the two playback timelines
+    cochange.ts      files that change together
+    meaning.ts       hotspots, ownership, story facts, search
+    atlas.worker.ts  the message handler tying those together
+  map/             the map's rendering and interaction (no React)
+    render.ts        canvas drawing
+    MapController.ts canvases, frame loop, pointer, transitions
+    colors.ts        colour ramps, lookup tables, label inks
+    hit.ts           what is under the pointer
+    clock.ts         playback position and speed
+  components/      React: panels, dock, tooltip, search, ticker
+  screens/         landing, loading, main
+  store/           small state containers (zustand)
+  styles/          design tokens and stylesheets
+scripts/           the synthetic history generator
+e2e/               browser tests and screenshots
+```
+
+**Built with** Vite, React, TypeScript in strict mode, a handful of d3 modules
+(`d3-hierarchy`, `d3-scale`, `d3-shape`, `d3-array`, `d3-interpolate`,
+`d3-ease`), framer-motion for interface polish only — never for the map — and
+zustand for state. Fonts are self-hosted: Inter for the interface, Source Code
+Pro for paths and numbers, Newsreader for the story sentences.
+
+---
+
+## Decisions and limitations
+
+**Not built yet** (the remaining milestone): exporting the map as an image or a
+video of the playback, a plain HTML table view of the same information for
+people who cannot use the canvas, and an in-app help sheet.
+
+**Known limitations**, all consequences of using only commit metadata:
+
+- File sizes are estimates, not measurements.
+- Deleted binary files, and deletions that happen only inside a merge, stay on
+  the map — about 1.5% overshoot on the demo.
+- One person using two email addresses appears as two people.
+- The map is designed for a desktop-sized screen; below 900 pixels wide it falls
+  back to a simplified stacked layout.
+
+**Choices worth knowing about:**
+
+- **Colours and type follow the Wise design system** rather than the original
+  brief's palette, at the project owner's request. Night remains the default
+  because heat glows read better on a dark background.
+- **Wise Sans is not distributable**, so display text uses Inter at its heaviest
+  weight.
+- **The demo ships as plain text, not compressed.** Web servers add their own
+  compression to `.gz` files and browsers silently undo it, at which point the
+  app's own decompression is handed plain text and fails. The compressed path
+  still exists for `.gz` files you drop yourself.
+- **Connection arcs** were originally a stretch goal, brought forward on
+  request.
+
+---
+
+## Licence and credits
+
+The demo dataset is the commit history of
+[axios/axios](https://github.com/axios/axios), used under the MIT licence, and
+credited in the application footer.
