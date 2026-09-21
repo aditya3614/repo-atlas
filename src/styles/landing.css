@@ -3,37 +3,93 @@
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+  background: var(--bg);
 }
 
-.ambient {
+/* Everything on the page shares one column: the same left and right edges as
+   the logo, the headline, the paragraphs and the footer. */
+.landing {
+  --edge: max(var(--s-9), calc((100vw - var(--max-w)) / 2 + var(--s-9)));
+  --top-h: 88px;
+  --foot-h: 60px;
+}
+
+/* The globe sits on the right, exactly as tall as the space between the top bar
+   and the footer, so its centre is also the centre of the headline. */
+.globe {
   position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  top: var(--top-h);
+  bottom: var(--foot-h);
+  right: max(0px, calc((100vw - var(--max-w)) / 2));
+  width: min(50vw, 680px);
+  /* A canvas ignores top and bottom on their own; it needs the height spelled out. */
+  height: calc(100vh - var(--top-h) - var(--foot-h));
   display: block;
-  z-index: 0;
-}
-
-/* Scrim: the map stays visible but never fights the text for contrast. */
-.scrim {
-  position: fixed;
-  inset: 0;
   z-index: 1;
   pointer-events: none;
 }
-:root[data-theme='night'] .scrim {
-  background:
-    linear-gradient(to bottom, rgba(14, 15, 12, 0.92) 0%, rgba(14, 15, 12, 0) 130px),
-    linear-gradient(to top, rgba(14, 15, 12, 0.92) 0%, rgba(14, 15, 12, 0) 130px),
-    linear-gradient(100deg, rgba(14, 15, 12, 0.97) 0%, rgba(14, 15, 12, 0.92) 42%, rgba(14, 15, 12, 0.72) 70%, rgba(14, 15, 12, 0.8) 100%),
-    radial-gradient(120% 90% at 8% 40%, rgba(22, 51, 0, 0.55) 0%, rgba(14, 15, 12, 0) 60%);
+
+/* ---- skyline: gradient columns along the bottom edge ---- */
+.skyline {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(34vh, 330px);
+  z-index: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  pointer-events: none;
 }
-:root[data-theme='paper'] .scrim {
-  background:
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0) 130px),
-    linear-gradient(to top, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0) 130px),
-    linear-gradient(100deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.93) 42%, rgba(255, 255, 255, 0.76) 70%, rgba(255, 255, 255, 0.88) 100%),
-    radial-gradient(120% 90% at 8% 40%, rgba(226, 246, 213, 0.75) 0%, rgba(255, 255, 255, 0) 60%);
+
+/*
+ * Columns touch, with no gap and no rounding: the separation you see comes from
+ * neighbours standing at different heights, exactly as in the reference. The
+ * outer element rises from the floor once; the inner one sways for ever.
+ */
+.skyline-bar {
+  flex: 1 1 0;
+  min-width: 0;
+  transform-origin: bottom center;
+  animation: skyline-rise 1100ms var(--ease) both;
+  animation-delay: calc(700ms + var(--i) * 45ms);
+}
+
+.skyline-col {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: bottom center;
+  transform: scaleY(var(--h-lo));
+  /* A straight fade over the column's whole height, measured from the
+     reference: solid at the floor, nothing at the top. */
+  background: linear-gradient(to top, var(--skyline) 0%, transparent 100%);
+  animation: skyline-sway 12s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes skyline-sway {
+  0%,
+  100% {
+    transform: scaleY(var(--h-lo));
+  }
+  50% {
+    transform: scaleY(var(--h-hi));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skyline-col {
+    animation: none;
+    transform: scaleY(var(--h-hi));
+  }
+}
+
+@keyframes skyline-rise {
+  from { transform: scaleY(0); opacity: 0; }
+  to   { transform: scaleY(1); opacity: 1; }
 }
 
 .landing-top,
@@ -42,9 +98,7 @@
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: var(--max-w);
-  margin: 0 auto;
-  padding-inline: var(--s-9);
+  padding-inline: var(--edge);
 }
 
 /* ---- top bar ---- */
@@ -52,57 +106,74 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 76px;
+  height: var(--top-h);
 }
 .brand { display: flex; align-items: center; gap: var(--s-3); color: var(--text); }
-.brand-name { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.brand-name { font-size: 20px; font-weight: 500; letter-spacing: -0.02em; }
 .top-right { display: flex; align-items: center; gap: var(--s-3); }
 
 .chip-privacy {
-  background: var(--surface-2);
-  border: 1px solid var(--hairline);
+  background: transparent;
+  border: 1px solid var(--hairline-strong);
   color: var(--text-muted);
   font-weight: 500;
-  height: 32px;
+  height: 34px;
+  padding-inline: 14px;
+  font-size: 13px;
 }
-:root[data-theme='night'] .chip-privacy { background: rgba(33, 35, 29, 0.72); }
-:root[data-theme='paper'] .chip-privacy { background: rgba(255, 255, 255, 0.75); }
-.dot-lime { width: 6px; height: 6px; border-radius: 50%; background: var(--w-lime); display: inline-block; }
+.dot-pink { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; }
 .theme-dot {
   width: 12px; height: 12px; border-radius: 50%;
   border: 1px solid var(--hairline-strong);
   background: linear-gradient(135deg, var(--text) 50%, transparent 50%);
 }
 
-/* ---- body ---- */
+/* ---- body: the headline centred on the globe, the paragraphs beneath it ---- */
 .landing-body {
   display: grid;
-  grid-template-columns: minmax(480px, 1fr) minmax(0, 520px);
-  gap: var(--s-10);
-  align-items: center;
-  padding-block: var(--s-8) var(--s-8);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 480px);
+  gap: var(--s-9);
+  align-items: stretch;
+  padding-block: 0;
 }
 
-.hero-title { color: var(--text); margin-bottom: var(--s-6); }
-:root[data-theme='night'] .hero-title { text-shadow: 0 2px 40px rgba(14, 15, 12, 0.8); }
+/* Vertically centred in the space the globe is centred in. */
+.hero { align-self: center; }
 
-.hero-sub { color: var(--text-muted); max-width: 560px; }
-.hero-sub .mono { color: var(--text); font-size: 15px; }
-
-.hero-actions { display: flex; gap: var(--s-3); margin-top: var(--s-7); flex-wrap: wrap; }
-
-.hero-privacy {
-  margin-top: var(--s-6);
-  color: var(--text-faint);
-  max-width: 520px;
-  line-height: 18px;
+.hero-title {
+  color: var(--text);
+  margin-bottom: var(--s-8);
+  font-size: clamp(46px, 5.2vw, 84px);
 }
+/* Each line is clipped so it can slide up out of its own baseline. The padding
+   and the negative margin keep descenders (the y and p) from being cut off. */
+.line { display: block; overflow: hidden; padding-bottom: 0.14em; margin-bottom: -0.14em; }
+.line-in { display: block; }
 
-.aside { min-height: 1px; }
+.hero-actions { display: flex; gap: var(--s-3); flex-wrap: wrap; }
+
+.aside { min-height: 1px; align-self: end; margin-bottom: var(--s-6); }
+/* The steps card takes the middle of the page, over the globe. */
+.aside.is-panel { align-self: center; margin-bottom: 0; }
+
+/* Set in a light grey with one phrase picked out in white, sitting just below
+   the globe and brushing its lower edge. */
+.hero-copy { display: grid; gap: var(--s-4); }
+.hero-sub {
+  color: var(--text-muted);
+  font-size: 17px;
+  line-height: 26px;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  /* Where the globe brushes the text, the page colour keeps it readable. */
+  text-shadow: 0 0 14px var(--bg), 0 0 4px var(--bg);
+}
+.hero-em { color: var(--text); }
+.hero-sub .mono { font-size: 16px; }
 
 /* ---- steps card ---- */
-.steps { background: var(--bg); padding: var(--s-6); }
-:root[data-theme='night'] .steps { background: rgba(28, 27, 25, 0.82); backdrop-filter: blur(12px); }
+.steps { background: var(--bg); padding: var(--s-6); border-radius: var(--r-lg); }
+:root[data-theme='night'] .steps { background: rgba(20, 10, 16, 0.86); backdrop-filter: blur(12px); }
 :root[data-theme='paper'] .steps { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); }
 
 .step-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-6); }
@@ -142,7 +213,7 @@
   overflow-wrap: anywhere;
   background: var(--bg-deep);
 }
-:root[data-theme='night'] .cmd-text { background: rgba(9, 10, 8, 0.6); }
+:root[data-theme='night'] .cmd-text { background: rgba(0, 0, 0, 0.55); }
 .cmd-copy {
   width: 100%;
   min-height: 44px;
@@ -174,16 +245,16 @@
 /* ---- error / empty states ---- */
 .state {
   padding: var(--s-6);
+  border-radius: var(--r-lg);
   display: grid;
   gap: var(--s-4);
   justify-items: start;
   background: var(--bg);
 }
-:root[data-theme='night'] .state { background: rgba(28, 27, 25, 0.82); backdrop-filter: blur(12px); }
+:root[data-theme='night'] .state { background: rgba(20, 10, 16, 0.86); backdrop-filter: blur(12px); }
 :root[data-theme='paper'] .state { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); }
 .state-error { border-color: rgba(203, 39, 47, 0.45); }
-.chip-error { background: rgba(203, 39, 47, 0.14); color: var(--danger); }
-:root[data-theme='night'] .chip-error { color: #ff8a90; }
+.chip-error { background: rgba(203, 39, 47, 0.14); color: var(--danger-text); }
 .state-title { font-size: 24px; line-height: 30px; font-weight: 700; }
 .state-detail { color: var(--text-muted); margin: 0; }
 .state-line {
@@ -207,10 +278,18 @@
   display: flex;
   justify-content: space-between;
   gap: var(--s-4);
-  height: 56px;
+  height: var(--foot-h);
   align-items: center;
-  color: var(--text-faint);
-  border-top: 1px solid var(--hairline);
+  color: var(--text-muted);
+}
+/* The columns run right to the bottom edge and are brightest there, so each
+   line of footer text carries its own dark backing to stay readable. */
+.landing-foot > span {
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .foot-right { text-align: right; }
 
@@ -238,33 +317,64 @@
   cursor: pointer;
   box-shadow: var(--shadow-raised);
 }
-:root[data-theme='paper'] .toast { background: var(--w-forest); color: #fff; border-color: transparent; }
+:root[data-theme='paper'] .toast { background: var(--p-plum); color: #fff; border-color: transparent; }
 .toast-error { border-color: rgba(203, 39, 47, 0.5); }
+
+/* ---- entrance: the headline slides up line by line, everything else rises ---- */
+.line-in.is-booting {
+  transform: translateY(108%);
+  opacity: 0;
+  animation: line-in 1100ms var(--ease) forwards;
+  animation-delay: var(--d, 0ms);
+}
+.rise {
+  opacity: 0;
+  animation: rise 900ms var(--ease) forwards;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes line-in {
+  from { transform: translateY(108%); opacity: 0; filter: blur(8px); }
+  to   { transform: translateY(0);    opacity: 1; filter: blur(0); }
+}
+@keyframes rise {
+  from { transform: translateY(14px); opacity: 0; filter: blur(4px); }
+  to   { transform: translateY(0);    opacity: 1; filter: blur(0); }
+}
+/* Nothing waits its turn for someone who asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .line-in.is-booting, .rise, .skyline-bar { animation-delay: 0s !important; }
+}
 
 /* ---- responsive: desktop first, simplified below 900px ---- */
 /* Short viewports (a 1024x700 laptop) must still show the footer without scrolling. */
 @media (max-height: 800px) {
-  .landing-body { padding-block: var(--s-5) var(--s-6); gap: var(--s-8); }
-  .hero-title { font-size: clamp(44px, 5.6vw, 72px); margin-bottom: var(--s-5); }
-  .hero-actions { margin-top: var(--s-6); }
-  .hero-privacy { margin-top: var(--s-5); }
+  .landing { --top-h: 72px; --foot-h: 52px; }
+  .landing-body { gap: var(--s-8); }
+  .skyline { height: min(26vh, 180px); }
+  .hero-title { margin-bottom: var(--s-6); }
+  /* Less room under the globe: one paragraph, and it may sit closer. */
+  .hero-sub + .hero-sub { display: none; }
+  .aside { margin-bottom: var(--s-4); }
   .steps { padding: var(--s-5); }
   .step-list { gap: var(--s-5); }
   .drop-label { padding: var(--s-5) var(--s-4); }
 }
 
 @media (max-width: 1180px) {
-  .landing-top, .landing-body, .landing-foot { padding-inline: var(--s-7); }
-  .landing-body { grid-template-columns: minmax(420px, 1fr) minmax(0, 460px); gap: var(--s-8); }
+  .landing { --edge: var(--s-7); }
+  .landing-body { grid-template-columns: minmax(0, 1fr) minmax(280px, 420px); gap: var(--s-8); }
 }
 @media (max-width: 900px) {
+  .landing { --edge: var(--s-4); }
   .landing-body {
     grid-template-columns: 1fr;
     gap: var(--s-7);
     align-items: start;
-    padding-block: var(--s-7) var(--s-9);
+    padding-block: var(--s-6) var(--s-9);
   }
-  .landing-top, .landing-body, .landing-foot { padding-inline: var(--s-4); }
+  .aside, .aside.is-panel { align-self: start; margin-bottom: 0; }
+  /* No room beside the text, so the globe sits behind it, quietly. */
+  .globe { right: -20vw; width: 110vw; opacity: 0.4; }
   .landing-foot { height: auto; flex-direction: column; align-items: flex-start; padding-block: var(--s-4); }
   .foot-right { text-align: left; }
 }

@@ -75,7 +75,6 @@ export interface LayoutPayload {
   author: Uint32Array;
   type: Uint8Array;
   firstTime: Float64Array;
-  churn: Float32Array;
   folderRects: Float32Array;
   folderDepth: Uint8Array;
   folderNames: string[];
@@ -95,8 +94,6 @@ export interface Tables {
   /** Palette slot per author id: 0-9 for the ten biggest, 10 for the rest. */
   authorSlot: Uint8Array;
   binaryWeight: number;
-  /** Top of the churn ramp: the 98th percentile, not the outlier maximum. */
-  maxChurn: number;
 }
 
 export interface TimelinePayload {
@@ -165,6 +162,77 @@ export interface SearchHit {
   score: number;
 }
 
+/** A person the search box matched, by name or email. */
+export interface PersonHit {
+  id: number;
+  name: string;
+  email: string;
+  commits: number;
+  bot: boolean;
+  score: number;
+}
+
+/** One commit in a person's history. Times are the date git recorded. */
+export interface AuthorCommit {
+  commit: number;
+  subject: string;
+  time: number;
+  files: number;
+  adds: number;
+  dels: number;
+}
+
+/** A file one commit changed, under the name it had at that moment. */
+export interface CommitFile {
+  fileId: number;
+  path: string;
+  adds: number;
+  dels: number;
+  binary: boolean;
+}
+
+/** Everything the Person tab shows: one author, read out of the whole history. */
+export interface AuthorProfile {
+  id: number;
+  name: string;
+  email: string;
+  bot: boolean;
+  commits: number;
+  /** Fractions of the whole repository, 0 to 1. */
+  commitShare: number;
+  /** 1 is the busiest committer, out of `people`. */
+  rank: number;
+  people: number;
+  adds: number;
+  dels: number;
+  addShare: number;
+  delShare: number;
+  filesTouched: number;
+  filesTotal: number;
+  /** Files where this person added the most lines. */
+  owns: number;
+  first: { commit: number; time: number; subject: string };
+  last: { commit: number; time: number; subject: string };
+  spanDays: number;
+  activeDays: number;
+  busiest: { time: number; commits: number; commit: number };
+  longestStreak: number;
+  /** Commits per slice of the repository's whole life, oldest first. */
+  activity: Uint32Array;
+  activityFrom: number;
+  activityTo: number;
+  /** Commits by day of the week, Sunday first. */
+  weekdays: number[];
+  /** Files touched by kind, in TYPE_NAMES order. */
+  kinds: number[];
+  topFiles: { fileId: number; path: string; commits: number; adds: number; dels: number; last: number }[];
+  topFolders: { path: string; touches: number }[];
+  recent: AuthorCommit[];
+  moreRecent: boolean;
+  /** Every file this person has ever touched, so the map can light them up. */
+  fileIds: Uint32Array;
+}
+
 /** Everything the Selection tab shows about one file. */
 export interface FileDetail {
   fileId: number;
@@ -198,6 +266,9 @@ export type ToWorker =
   | { type: 'subjects'; from: number; count: number }
   | { type: 'meaning'; commit: number }
   | { type: 'search'; query: string; commit: number; limit: number }
+  | { type: 'profile'; author: number }
+  | { type: 'authorCommits'; author: number; before: number; limit: number }
+  | { type: 'commitFiles'; commit: number }
   | { type: 'detail'; fileId: number; commit: number };
 
 export type FromWorker =
@@ -210,5 +281,8 @@ export type FromWorker =
   | { type: 'timeline'; timeline: TimelinePayload }
   | { type: 'subjects'; window: SubjectWindow }
   | { type: 'meaning'; meaning: MeaningPayload }
-  | { type: 'search'; query: string; hits: SearchHit[] }
+  | { type: 'search'; query: string; hits: SearchHit[]; people: PersonHit[] }
+  | { type: 'profile'; profile: AuthorProfile }
+  | { type: 'authorCommits'; author: number; commits: AuthorCommit[]; more: boolean }
+  | { type: 'commitFiles'; commit: number; files: CommitFile[]; total: number }
   | { type: 'detail'; detail: FileDetail };

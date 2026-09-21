@@ -72,8 +72,7 @@ test('colour modes switch by keyboard and each has a legend', async ({ page }) =
   for (const [key, name, legend, slug] of [
     ['2', 'Who wrote it', 'added the most lines', 'author'],
     ['3', 'How old', 'first appeared', 'age'],
-    ['4', 'How often rewritten', 'added or removed', 'churn'],
-    ['5', 'Kind of file', 'name and extension', 'type'],
+    ['4', 'Kind of file', 'name and extension', 'type'],
     ['1', 'Recently changed', 'fade as they go quiet', 'activity'],
   ] as const) {
     await page.keyboard.press(key);

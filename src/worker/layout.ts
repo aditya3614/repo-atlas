@@ -37,7 +37,6 @@ export interface LayoutResult {
   author: Uint32Array;
   type: Uint8Array;
   firstTime: Float64Array;
-  churn: Float32Array;
   /** Folder regions, deepest last, for borders and labels. */
   folderRects: Float32Array;
   folderDepth: Uint8Array;
@@ -149,7 +148,6 @@ export function computeLayout(
   const author = new Uint32Array(n);
   const type = new Uint8Array(n);
   const firstTime = new Float64Array(n);
-  const churn = new Float32Array(n);
 
   let hiddenCount = 0;
   for (let i = 0; i < n; i++) {
@@ -169,7 +167,6 @@ export function computeLayout(
     author[i] = index.dominantAuthor[f]!;
     type[i] = index.pathType[p]!;
     firstTime[i] = d.time[d.files.firstCommit[f]!] ?? 0;
-    churn[i] = d.files.adds[f]! + d.files.dels[f]!;
     if (node.x1 - node.x0 < 0.75 || node.y1 - node.y0 < 0.75) hiddenCount++;
   }
 
@@ -206,7 +203,6 @@ export function computeLayout(
     author,
     type,
     firstTime,
-    churn,
     folderRects,
     folderDepth,
     folderNames,
@@ -229,7 +225,6 @@ export function transferables(r: LayoutResult): Transferable[] {
     r.author.buffer,
     r.type.buffer,
     r.firstTime.buffer,
-    r.churn.buffer,
     r.folderRects.buffer,
     r.folderDepth.buffer,
   ] as Transferable[];

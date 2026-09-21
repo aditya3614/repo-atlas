@@ -97,7 +97,7 @@ test('the help sheet lists every shortcut', async ({ page }) => {
   const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
   await expect(sheet).toBeVisible();
 
-  for (const key of ['Space', '← →', 'Shift + ← →', 'Home / End', '[ ]', '1 – 5', 'c', '/', 't', '?']) {
+  for (const key of ['Space', '← →', 'Shift + ← →', 'Home / End', '[ ]', '1 – 4', 'c', '/', 't', '?']) {
     await expect(sheet.locator('kbd', { hasText: key }).first()).toBeVisible();
   }
   await page.waitForTimeout(350);

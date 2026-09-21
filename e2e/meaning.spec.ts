@@ -100,6 +100,48 @@ test('search finds a file and dims the rest', async ({ page }) => {
   await expect(page.locator('.sel-name')).toContainText('http');
 });
 
+test('search finds a person and analyses their whole history', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  page.on('pageerror', (e) => errors.push(e.message));
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await loadDemo(page);
+
+  await page.keyboard.press('/');
+  await page.keyboard.type('zabriskie');
+  await expect(page.locator('.search-person').first()).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('.search-people')).toContainText('Matt Zabriskie');
+  await page.keyboard.press('Enter');
+
+  // The Person tab opens on them, with the numbers a reader would ask for.
+  await expect(page.locator('.search')).toHaveCount(0);
+  await expect(page.locator('.person-title')).toContainText('Matt Zabriskie', { timeout: 5000 });
+  for (const label of ['Commits', 'Lines added', 'Files touched', 'First commit', 'Latest commit', 'Busiest day']) {
+    await expect(page.locator('.person')).toContainText(label, { ignoreCase: true });
+  }
+  // Dates are shown in the reader's own timezone, so the day may differ by one.
+  await expect(page.locator('.rows')).toContainText(/\d+ Aug 2014/);
+  await page.screenshot({ path: 'shots/person-night-1440x900.png' });
+
+  // Each commit opens to the files it changed.
+  await page.locator('.commit-head').first().click();
+  await expect(page.locator('.commit-file').first()).toBeVisible({ timeout: 5000 });
+
+  // Esc closes the profile and hands the panel back to the story.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.person')).toHaveCount(0);
+  expect(errors, errors.join(' | ')).toEqual([]);
+});
+
+test('the logo takes you back to the landing page', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await loadDemo(page);
+  await page.getByRole('button', { name: /back to the home page/i }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Watch your codebase');
+  await expect(page.locator('.map-wrap')).toHaveCount(0);
+});
+
 for (const theme of ['night', 'paper'] as const) {
   test(`panels look right in ${theme}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });

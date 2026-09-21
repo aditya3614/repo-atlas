@@ -11,6 +11,9 @@ when.
 
 Everything happens inside your browser tab. Nothing is uploaded anywhere.
 
+![The Repo Atlas landing page: a wireframe globe turning behind the headline,
+with a band of gradient columns rising along the bottom](docs/landing.png)
+
 ![The Repo Atlas map of the axios project: every file is a rectangle, grouped
 by folder and coloured by how recently it changed, with a streamgraph of
 contributors along the bottom](docs/map-night.png)
@@ -22,7 +25,7 @@ contributors along the bottom](docs/map-night.png)
 - [If you have never used git](#if-you-have-never-used-git)
 - [What you can do with it](#what-you-can-do-with-it)
   - [The map](#1-the-map)
-  - [Five ways to colour the map](#2-five-ways-to-colour-the-map)
+  - [Four ways to colour the map](#2-four-ways-to-colour-the-map)
   - [Looking at one file](#3-looking-at-one-file)
   - [Going into a folder](#4-going-into-a-folder)
   - [Playing the history](#5-playing-the-history)
@@ -96,22 +99,22 @@ drawn honestly. Rather than fake them, Repo Atlas merges them into their
 folder's background and tells you in the corner: *"4,235 files too small to draw
 at this size — zoom into a folder to see them."*
 
-### 2. Five ways to colour the map
+### 2. Four ways to colour the map
 
-![Colouring the map by how often each file has been rewritten, with the legend naming the mode, explaining it and labelling both ends of the scale](docs/colour-modes.png)
+![Colouring the map by who wrote each file, with the legend naming the mode,
+explaining it and listing the contributors it has given a colour](docs/colour-modes.png)
 
-Press **1**–**5**, or use the **Colour by** buttons above the map. Whichever you
+Press **1**–**4**, or use the **Colour by** buttons above the map. Whichever you
 pick, the strip under the map names it, explains it in a sentence, and labels
 both ends of the scale with real values — so you never have to guess what a
 colour is telling you.
 
 | Mode | What the colour shows | Reading it |
 | --- | --- | --- |
-| **1 Recently changed** (default) | How recently each file was touched, as of the date on the playhead | Dark = quiet for a long time. Green = touched recently. Yellow and amber = changed a lot, very recently. |
+| **1 Recently changed** (default) | How recently each file was touched, as of the date on the playhead | Dark = quiet for a long time. Pink = touched recently. Coral and amber = changed a lot, very recently. |
 | **2 Who wrote it** | Whoever added the most lines to each file | Ten colours for the ten biggest contributors, grey for everyone else. Bots are labelled "BOT". |
 | **3 How old** | When each file first appeared | Bright = added recently. Faded = there from early on. |
-| **4 How often rewritten** | Every line added or removed across the file's life, added up | Pale = written once and left alone. Deep teal = rewritten again and again. |
-| **5 Kind of file** | What sort of file it is, from its name | Code, Tests, Docs, Config, Assets. |
+| **4 Kind of file** | What sort of file it is, from its name | Code, Tests, Docs, Config, Assets. |
 
 Activity fades over time: a file that was edited constantly last year but not
 since will cool off as you move the playhead forward. This is why the map
@@ -295,8 +298,8 @@ dismissed.
 | **Shift + ←** / **→** | Jump ten commits |
 | **Home** / **End** | Go to the first or last commit |
 | **[** / **]** | Slower or faster |
-| **1**–**5** | Colour the map by Activity, Author, Age, Churn, Type |
-| **/** | Search for a file |
+| **1**–**4** | Colour the map by Activity, Author, Age, Type |
+| **/** | Search for a file, or a person |
 | **t** | Read the same information as a table |
 | **?** | Show every shortcut |
 | **Esc** | Close what is open, clear the selection, then zoom out |
@@ -672,6 +675,34 @@ adjacent matches score higher, and a match inside the file's name beats one
 buried in a directory. It runs in the worker against the files that exist at the
 current moment in the history.
 
+### The landing backdrop
+
+Two pieces of decoration, both drawn rather than filmed, so they cost a few
+kilobytes instead of a few megabytes and scale to any window.
+
+**The globe** (`src/components/GlobeBackdrop.tsx`) is a wireframe sphere of
+sixteen great circles — rings whose planes all pass through the centre, at
+random orientations, so they criss-cross instead of sitting in neat latitude
+bands. Each ring is sampled into points, spun and tilted, then projected flat.
+The far side of the sphere fades out, which is what stops it reading as a disc,
+and small nodes ride the rings. It redraws at 30fps, which is plenty for
+something this slow and halves the idle cost, and holds completely still under
+`prefers-reduced-motion`.
+
+**The columns along the bottom** (`src/components/Skyline.tsx`) were measured
+off a reference recording rather than judged by eye. Sampling the video frame by
+frame gave the numbers: the columns are 105 device pixels wide — 52 CSS pixels —
+and *touch*, with no gaps, so the separation you see is only neighbours standing
+at different heights. Each column is a straight linear fade from solid at its
+base to nothing at its top; the brightness measured down one column falls off
+almost exactly linearly. Their heights sway between about half height and full
+height on a twelve-second cycle, every column on its own phase.
+
+Each column is two nested elements: the outer one rises from the floor once as
+the page loads, the inner one sways for ever. Splitting them lets both animate
+`transform` without fighting over the same property, and keeps the whole band on
+the compositor — after the first paint the main thread does nothing at all.
+
 ---
 
 
@@ -697,7 +728,8 @@ src/
     colors.ts        colour ramps, lookup tables, label inks
     hit.ts           what is under the pointer
     clock.ts         playback position and speed
-  components/      React: panels, dock, tooltip, search, ticker
+  components/      React: panels, dock, tooltip, search, ticker,
+                   and the landing's globe and columns
   screens/         landing, loading, main
   store/           small state containers (zustand)
   styles/          design tokens and stylesheets

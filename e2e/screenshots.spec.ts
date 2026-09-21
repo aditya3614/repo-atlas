@@ -13,11 +13,14 @@ for (const theme of THEMES) {
       await page.addInitScript((t) => localStorage.setItem('atlas.theme', t), theme);
       await page.goto('/');
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-      await page.waitForTimeout(600);
+      // The landing animates in on a stagger: the headline, then the panel,
+      // then the columns rise one after another. Wait for it to settle, or
+      // every screenshot catches the page half-built.
+      await page.waitForTimeout(3600);
       await page.screenshot({ path: `shots/landing-${theme}-${size.name}.png` });
 
       await page.getByRole('button', { name: 'Use your repo' }).click();
-      await page.waitForTimeout(600);
+      await page.waitForTimeout(900);
       await page.screenshot({ path: `shots/steps-${theme}-${size.name}.png` });
     });
   }
@@ -84,17 +87,17 @@ for (const theme of THEMES) {
   }
 }
 
-test('reduced motion: the ambient map is static', async ({ page }) => {
+test('reduced motion: the globe holds still', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
-  const shot = () => page.locator('canvas.ambient').screenshot();
+  const shot = () => page.locator('canvas.globe').screenshot();
   const a = await shot();
   await page.waitForTimeout(1200);
   const b = await shot();
-  expect(Buffer.compare(a, b), 'ambient map moved under prefers-reduced-motion').toBe(0);
+  expect(Buffer.compare(a, b), 'the globe moved under prefers-reduced-motion').toBe(0);
 
   await page.screenshot({ path: 'shots/landing-night-reduced-1440x900.png' });
 });

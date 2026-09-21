@@ -65,7 +65,13 @@ export function Main() {
     const onMessage = (e: MessageEvent<FromWorker>) => {
       if (e.data.type === 'meaning') useMeaning.getState().setMeaning(e.data.meaning);
       else if (e.data.type === 'detail') useMeaning.getState().setDetail(e.data.detail);
-      else if (e.data.type === 'search') useMeaning.getState().setHits(e.data.query, e.data.hits);
+      else if (e.data.type === 'search')
+        useMeaning.getState().setHits(e.data.query, e.data.hits, e.data.people);
+      else if (e.data.type === 'profile') useMeaning.getState().setProfile(e.data.profile);
+      else if (e.data.type === 'authorCommits')
+        useMeaning.getState().addProfileCommits(e.data.author, e.data.commits, e.data.more);
+      else if (e.data.type === 'commitFiles')
+        useMeaning.getState().setCommitFiles(e.data.commit, e.data.files, e.data.total);
     };
     w.addEventListener('message', onMessage);
 
@@ -109,6 +115,14 @@ export function Main() {
     return () => w.removeEventListener('message', onMessage);
   }, [summary.commits]);
 
+  // The logo goes back to the landing page, closing anything open on the way.
+  const goHome = useCallback(() => {
+    useMeaning.getState().setSearchOpen(false);
+    useMeaning.getState().setProfile(null);
+    useMap.getState().setSelectedFile(-1);
+    reset();
+  }, [reset]);
+
   const nudge = useCallback((n: number) => {
     clock.playing = false;
     seekToCommit(clock.commit + n);
@@ -116,7 +130,7 @@ export function Main() {
   }, []);
 
   // Space plays, arrows step, [ and ] change speed, Home and End jump,
-  // 1-5 colour the map, c toggles the connection arcs, Esc backs out.
+  // 1-4 colour the map, c toggles the connection arcs, Esc backs out.
   const onKey = useCallback(
     (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -187,7 +201,8 @@ export function Main() {
             return;
           }
           const { selectedFile, root: r } = useMap.getState();
-          if (selectedFile >= 0) useMap.getState().setSelectedFile(-1);
+          if (useMeaning.getState().profile) useMeaning.getState().setProfile(null);
+          else if (selectedFile >= 0) useMap.getState().setSelectedFile(-1);
           else if (r !== '') setRoot(r.includes('/') ? r.slice(0, r.lastIndexOf('/')) : '');
           return;
         }
@@ -204,10 +219,16 @@ export function Main() {
   return (
     <div className="main">
       <header className="top-bar">
-        <div className="brand">
+        <button
+          type="button"
+          className="brand-link"
+          onClick={goHome}
+          aria-label="Repo Atlas — back to the home page"
+          title="Back to the home page"
+        >
           <Logo />
           <span className="brand-name">Repo Atlas</span>
-        </div>
+        </button>
 
         <div className="repo-line">
           <span className="repo-name">{summary.repo}</span>
@@ -259,7 +280,7 @@ export function Main() {
             type="button"
             className="btn btn-ghost"
             onClick={() => useMeaning.getState().setSearchOpen(true)}
-            title="Find a file — /"
+            title="Find a file or a person — /"
           >
             Search <kbd className="kbd">/</kbd>
           </button>

@@ -1,12 +1,20 @@
-/** Contour-ring mark: a repo read as terrain. */
+import { useId } from 'react';
+
+/** Four rounded tiles in a pink gradient: a repo read as territory. */
 export function Logo({ size = 28 }: { size?: number }) {
+  const id = useId();
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden="true" focusable="false">
-      <rect x="1" y="1" width="26" height="26" rx="7" fill="none" stroke="currentColor" strokeOpacity="0.35" />
-      <rect x="5.5" y="5.5" width="10" height="10" rx="2" fill="currentColor" fillOpacity="0.9" />
-      <rect x="17" y="5.5" width="5.5" height="5.5" rx="1.5" fill="currentColor" fillOpacity="0.45" />
-      <rect x="17" y="12.5" width="5.5" height="10" rx="1.5" fill="var(--accent)" />
-      <rect x="5.5" y="17" width="10" height="5.5" rx="1.5" fill="currentColor" fillOpacity="0.3" />
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#ff9cc2" />
+          <stop offset="1" stopColor="#ee4f8d" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="14" height="14" rx="4" fill={`url(#${id})`} />
+      <rect x="18" y="2" width="8" height="8" rx="2.5" fill={`url(#${id})`} fillOpacity="0.6" />
+      <rect x="18" y="12" width="8" height="14" rx="2.5" fill={`url(#${id})`} fillOpacity="0.85" />
+      <rect x="2" y="18" width="14" height="8" rx="2.5" fill={`url(#${id})`} fillOpacity="0.4" />
     </svg>
   );
 }

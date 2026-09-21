@@ -44,8 +44,9 @@
   grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
   align-items: center;
   gap: var(--s-6);
-  padding: var(--s-3) var(--s-7);
+  padding: var(--s-3) var(--s-5);
   border-top: 1px solid var(--hairline);
+  background: var(--bg);
   height: 76px;
   overflow: hidden;
 }

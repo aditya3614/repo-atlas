@@ -15,7 +15,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
   {
     title: 'The map',
     keys: [
-      ['1 – 5', 'Colour by activity, author, age, churn or type'],
+      ['1 – 4', 'Colour by activity, author, age or type'],
       ['c', 'Show files that change together'],
       ['Click a folder label', 'Zoom into that folder'],
       ['Esc', 'Clear the selection, then zoom out'],
@@ -24,7 +24,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
   {
     title: 'Finding things',
     keys: [
-      ['/', 'Search for a file by path'],
+      ['/', 'Search for a file by path, or a person by name or email'],
       ['t', 'Read the same information as a table'],
       ['?', 'This help'],
     ],

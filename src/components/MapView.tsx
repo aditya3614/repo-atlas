@@ -28,6 +28,7 @@ export function MapView({ summary }: { summary: Summary }) {
   const root = useMap((s) => s.root);
   const tables = useMap((s) => s.tables);
   const hits = useMeaning((s) => s.hits);
+  const profile = useMeaning((s) => s.profile);
   const layout = useMap((s) => s.layout);
   const layoutVersion = layout?.id ?? 0;
   const selectedFile = useMap((s) => s.selectedFile);
@@ -205,15 +206,18 @@ export function MapView({ summary }: { summary: Summary }) {
     const c = controllerRef.current;
     const l = c.currentLayout();
     if (!l) return;
-    if (hits.length === 0) {
+    // A file search wins while it is typed; otherwise a person's files light up.
+    const ids: ArrayLike<number> | null =
+      hits.length > 0 ? hits.map((h) => h.fileId) : profile ? profile.fileIds : null;
+    if (!ids) {
       c.setDimmed(null);
       return;
     }
-    const wanted = new Set(hits.map((h) => h.fileId));
+    const wanted = new Set<number>(Array.from(ids));
     const mask = new Uint8Array(l.fileIds.length);
     for (let i = 0; i < l.fileIds.length; i++) mask[i] = wanted.has(l.fileIds[i]!) ? 0 : 1;
     c.setDimmed(mask);
-  }, [hits, layoutVersion]);
+  }, [hits, profile, layoutVersion]);
 
   // Selection drives the overlay, not the layout.
   useEffect(() => {

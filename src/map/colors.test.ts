@@ -36,7 +36,7 @@ describe('reading colours', () => {
 /** Every shade of every palette, with the group it belongs to. */
 function shades(pal: Palette): [string, string, number][] {
   const out: [string, string, number][] = [];
-  for (const group of ['activity', 'age', 'churn', 'author', 'type'] as const) {
+  for (const group of ['activity', 'age', 'author', 'type'] as const) {
     pal[group].forEach((colour, i) => out.push([group, colour, i]));
   }
   return out;
@@ -47,7 +47,7 @@ describe.each(['night', 'paper'] as ThemeName[])('the %s palette as the renderer
 
   it('gives every shade a label ink that reaches the minimum contrast', () => {
     const failures: string[] = [];
-    for (const group of ['activity', 'age', 'churn', 'author', 'type'] as const) {
+    for (const group of ['activity', 'age', 'author', 'type'] as const) {
       pal[group].forEach((colour, i) => {
         const ink = pal.needsDarkInk[group][i] === 1 ? pal.inkDark : pal.inkLight;
         const ratio = contrastRatio(colour, ink);
@@ -62,7 +62,7 @@ describe.each(['night', 'paper'] as ThemeName[])('the %s palette as the renderer
     // hottest, brightest cell on the map was handed white text. Whatever a
     // theme's ramps look like, the ink chosen must be the one that reads better.
     const wrong: string[] = [];
-    for (const group of ['activity', 'age', 'churn', 'author', 'type'] as const) {
+    for (const group of ['activity', 'age', 'author', 'type'] as const) {
       pal[group].forEach((colour, i) => {
         const chosen = pal.needsDarkInk[group][i] === 1 ? pal.inkDark : pal.inkLight;
         const other = pal.needsDarkInk[group][i] === 1 ? pal.inkLight : pal.inkDark;
@@ -86,20 +86,20 @@ describe.each(['night', 'paper'] as ThemeName[])('the %s palette as the renderer
   // Night's ramps run from near-black to bright, so they must use both inks.
   // Paper's activity ramp is light throughout, where dark ink throughout is right.
   it.runIf(theme === 'night')('uses both inks across a ramp that spans dark to bright', () => {
-    for (const group of ['activity', 'age', 'churn'] as const) {
+    for (const group of ['activity', 'age'] as const) {
       expect(new Set(pal.needsDarkInk[group]).size, `${group} uses both inks`).toBe(2);
     }
   });
 
   it('keeps every ramp continuous enough to read as a ramp', () => {
     // Borrowing a neighbour's colour must not turn a ramp into a few big blocks.
-    for (const group of ['activity', 'age', 'churn'] as const) {
+    for (const group of ['activity', 'age'] as const) {
       const distinct = new Set(pal[group]).size;
       expect(distinct, `${group} distinct shades`).toBeGreaterThanOrEqual(48);
     }
   });
 
   it('has shades to test at all', () => {
-    expect(shades(pal).length).toBeGreaterThan(200);
+    expect(shades(pal).length).toBeGreaterThan(100);
   });
 });

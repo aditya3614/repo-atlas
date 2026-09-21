@@ -1,7 +1,6 @@
 import { TYPE_NAMES } from '../worker/fileIndex';
 import { MODE_HINTS, MODE_LABELS, type Mode, type Palette } from '../map/colors';
 import type { Summary, Tables } from '../lib/protocol';
-import { compact } from '../lib/format';
 
 /**
  * What the colours currently mean, in words and as a scale.
@@ -39,13 +38,6 @@ export function Legend({
             pal={pal.age}
             from={`Here since ${new Date(summary.firstTime).getFullYear()}`}
             to={`Added by ${new Date(summary.lastTime).getFullYear()}`}
-          />
-        )}
-        {mode === 'churn' && (
-          <Ramp
-            pal={pal.churn}
-            from="Barely touched"
-            to={`~${compact(tables?.maxChurn ?? 0)} lines or more`}
           />
         )}
         {mode === 'type' && (

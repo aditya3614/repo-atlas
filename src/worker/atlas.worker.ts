@@ -6,6 +6,7 @@ import { FileIndex } from './fileIndex';
 import { computeLayout, transferables } from './layout';
 import { buildTimeline } from './timeline';
 import { folderTable, hotspots, ownership, searchPaths, singleOwner, storyFacts } from './meaning';
+import { authorCommits, commitFiles, profileOf, searchPeople } from './people';
 import type { FromWorker, InputError, Progress, Summary, Tables, ToWorker } from '../lib/protocol';
 
 /**
@@ -16,6 +17,8 @@ import type { FromWorker, InputError, Progress, Summary, Tables, ToWorker } from
 
 const HUGE_BYTES = 120 * 1024 * 1024;
 const PROGRESS_MS = 100;
+/** How many of a person's commits the profile carries before "show more". */
+const RECENT_PAGE = 25;
 
 let cancelled = false;
 
@@ -189,7 +192,6 @@ async function parse(msg: Extract<ToWorker, { type: 'parse' }>): Promise<void> {
     authorBot: dataset.authors.bot,
     authorSlot,
     binaryWeight: BINARY_WEIGHT,
-    maxChurn: churnScale(dataset),
   };
   post({ type: 'done', summary, tables });
 }
@@ -249,23 +251,6 @@ function detailOf(fileId: number, commit: number) {
     folder,
     history: index.sizeHistory(fileId, BINARY_WEIGHT, 96),
   };
-}
-
-/*
- * The top of the churn scale. Not the maximum: one generated file with a
- * quarter of a million changed lines squashes every other file into the same
- * middle colour. The 98th percentile keeps the ramp spread across the files
- * anyone is actually looking at, and the legend says "or more".
- */
-function churnScale(d: Dataset): number {
-  const churn: number[] = [];
-  for (let f = 0; f < d.fileCount; f++) {
-    const c = d.files.adds[f]! + d.files.dels[f]!;
-    if (c > 0) churn.push(c);
-  }
-  if (churn.length === 0) return 1;
-  churn.sort((a, b) => a - b);
-  return churn[Math.min(churn.length - 1, Math.floor(churn.length * 0.98))]!;
 }
 
 function layout(request: Extract<ToWorker, { type: 'layout' }>['request']): void {
@@ -336,7 +321,28 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
       type: 'search',
       query: msg.query,
       hits: searchPaths(loaded.dataset, state, msg.query, msg.limit),
+      people: searchPeople(loaded.dataset, msg.query, 6),
     });
+    return;
+  }
+  if (msg.type === 'profile') {
+    if (!loaded) return;
+    post({
+      type: 'profile',
+      profile: profileOf(loaded.dataset, loaded.index, msg.author, RECENT_PAGE),
+    });
+    return;
+  }
+  if (msg.type === 'authorCommits') {
+    if (!loaded) return;
+    const page = authorCommits(loaded.dataset, msg.author, msg.before, msg.limit);
+    post({ type: 'authorCommits', author: msg.author, ...page });
+    return;
+  }
+  if (msg.type === 'commitFiles') {
+    if (!loaded) return;
+    const k = Math.max(0, Math.min(loaded.dataset.commitCount - 1, msg.commit));
+    post({ type: 'commitFiles', commit: k, ...commitFiles(loaded.dataset, k, 80) });
     return;
   }
   if (msg.type === 'detail') {

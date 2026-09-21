@@ -5,28 +5,38 @@ import { useMeaning } from '../store/meaning';
 import { compact, formatCount, formatDate } from '../lib/panelFormat';
 import { usePrefersReducedMotion } from '../lib/motion';
 import { Sparkline } from './Sparkline';
+import { PersonPanel } from './PersonPanel';
 import { TYPE_NAMES } from '../worker/fileIndex';
 import { clock, notifyClock, seekToCommit } from '../map/clock';
 import type { FileDetail, Summary, Tables } from '../lib/protocol';
 
-type Tab = 'story' | 'hotspots' | 'selection' | 'about';
+type Tab = 'story' | 'hotspots' | 'selection' | 'person' | 'about';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'story', label: 'Story' },
   { id: 'hotspots', label: 'Hotspots' },
   { id: 'selection', label: 'Selection' },
+  { id: 'person', label: 'Person' },
   { id: 'about', label: 'Summary' },
 ];
 
 export function SidePanel({ summary, tables }: { summary: Summary; tables: Tables | null }) {
   const selected = useMap((s) => s.selectedFile);
   const detail = useMeaning((s) => s.detail);
+  const profile = useMeaning((s) => s.profile);
   const [tab, setTab] = useState<Tab>('story');
   const reduced = usePrefersReducedMotion();
 
   useEffect(() => {
     if (selected >= 0) setTab('selection');
   }, [selected]);
+
+  // Choosing a person from search brings their profile to the front; closing
+  // it sends the panel back to the story rather than leaving a dead tab.
+  useEffect(() => {
+    if (profile) setTab('person');
+    else setTab((t) => (t === 'person' ? 'story' : t));
+  }, [profile]);
 
   return (
     <aside className="panel-col" aria-label="Details">
@@ -39,7 +49,7 @@ export function SidePanel({ summary, tables }: { summary: Summary; tables: Table
             aria-selected={tab === t.id}
             className={`tab ${tab === t.id ? 'is-on' : ''}`}
             onClick={() => setTab(t.id)}
-            disabled={t.id === 'selection' && selected < 0}
+            disabled={(t.id === 'selection' && selected < 0) || (t.id === 'person' && !profile)}
           >
             {t.label}
           </button>
@@ -65,6 +75,7 @@ export function SidePanel({ summary, tables }: { summary: Summary; tables: Table
             ) : (
               <p className="label">Click a cell on the map to see what it is.</p>
             ))}
+          {tab === 'person' && profile && <PersonPanel profile={profile} tables={tables} />}
           {tab === 'about' && <About summary={summary} tables={tables} />}
         </motion.div>
       </AnimatePresence>

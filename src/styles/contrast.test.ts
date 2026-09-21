@@ -79,7 +79,6 @@ describe.each([
     const cellColours = [
       '--heat-0', '--heat-1', '--heat-2', '--heat-3', '--heat-4',
       '--age-new', '--age-mid', '--age-old',
-      '--churn-0', '--churn-1', '--churn-2',
       '--type-code', '--type-tests', '--type-docs', '--type-config', '--type-assets',
       '--cat-1', '--cat-2', '--cat-3', '--cat-4', '--cat-5',
       '--cat-6', '--cat-7', '--cat-8', '--cat-9', '--cat-10', '--cat-rest',

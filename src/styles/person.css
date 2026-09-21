@@ -1,0 +1,157 @@
+/* ---- the Person tab: one author, analysed ---- */
+.person { display: grid; gap: 0; }
+
+.person-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s-3); align-items: center; }
+.person-avatar-lg { width: 44px; height: 44px; font-size: 18px; }
+.person-title {
+  margin: 0;
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.person-title .swatch-bot { margin-left: 8px; vertical-align: 2px; }
+.person-mail { margin: 2px 0 0; color: var(--text-faint); overflow-wrap: anywhere; }
+.person-close { min-height: 32px; }
+.person .person-lead { margin: var(--s-3) 0 var(--s-5); }
+
+.plus { color: var(--accent); }
+.minus { color: var(--danger-text); }
+
+/* key / value rows: label above, value beside a small note */
+.rows { margin: 0; display: grid; gap: 2px; }
+.row-wrap { display: block; }
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px var(--s-3);
+  width: 100%;
+  padding: var(--s-2) var(--s-2);
+  border-radius: var(--r-sm);
+  text-align: left;
+}
+.row-btn { border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.row-btn:hover { background: var(--accent-soft); }
+.row-k { color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; align-self: center; }
+.row-v { font-size: 14px; color: var(--text); text-align: right; }
+.row-note {
+  grid-column: 1 / -1;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* share of the repository */
+.shares { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); }
+.share {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 44px;
+  grid-template-areas: 'label bar n' '. detail detail';
+  align-items: center;
+  gap: 2px var(--s-3);
+  font-size: 13px;
+}
+.share-label { grid-area: label; color: var(--text-muted); }
+.share .author-bar { grid-area: bar; }
+.share-n { grid-area: n; text-align: right; font-size: 13px; }
+.share-detail { grid-area: detail; color: var(--text-faint); }
+
+/* activity: commits over the project's life */
+.bars {
+  height: 64px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: var(--s-2);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+:root[data-theme='night'] .bars { background: rgba(38, 24, 33, 0.6); }
+.bar { flex: 1; min-width: 0; border-radius: 2px 2px 0 0; background: var(--hairline-strong); }
+.bar.has { background: var(--accent); }
+.bars-axis { display: flex; justify-content: space-between; color: var(--text-faint); margin-top: 4px; }
+
+/* days of the week */
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--s-2); height: 72px; }
+.week-col { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 4px; justify-items: center; }
+.week-bar {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  border-radius: var(--r-xs);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+:root[data-theme='night'] .week-bar { background: rgba(38, 24, 33, 0.6); }
+.week-bar > span { display: block; width: 100%; background: var(--accent); border-radius: var(--r-xs); }
+.week-day { color: var(--text-faint); }
+
+/* what they work on */
+.kinds { display: flex; height: 10px; border-radius: var(--r-pill); overflow: hidden; gap: 2px; }
+.kinds > span { min-width: 3px; }
+.kind-legend {
+  list-style: none;
+  margin: var(--s-2) 0 var(--s-3);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--s-4);
+  color: var(--text-muted);
+}
+.kind-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.folders { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.folder-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  width: 100%;
+  padding: 6px var(--s-2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.folder-row:hover:not(:disabled) { background: var(--accent-soft); }
+.folder-row:disabled { cursor: default; color: var(--text-muted); }
+.folder-row .tiny { color: var(--text-faint); white-space: nowrap; }
+
+/* commits, each one openable to show its files */
+.commit-list { list-style: none; margin: var(--s-3) 0 0; padding: 0; display: grid; gap: var(--s-2); }
+.commit-item { border: 1px solid var(--hairline); border-radius: var(--r-md); overflow: hidden; }
+.commit-item.is-open { border-color: var(--hairline-strong); }
+.commit-head {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.commit-head:hover { background: var(--accent-soft); }
+.commit-body { padding: 0 var(--s-2) var(--s-2); border-top: 1px solid var(--hairline); }
+.commit-files { list-style: none; margin: var(--s-2) 0 0; padding: 0; display: grid; gap: 1px; }
+.commit-file {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-3);
+  align-items: center;
+  width: 100%;
+  padding: 5px var(--s-2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.commit-file:hover { background: var(--accent-soft); }
+.commit-file-n { color: var(--text-faint); white-space: nowrap; }
+.commit-jump { margin-top: var(--s-2); min-height: 32px; }
+.commit-more { margin-top: var(--s-4); width: 100%; min-height: 40px; font-size: 14px; }

@@ -2,7 +2,6 @@ import type { LayoutPayload, Tables } from '../lib/protocol';
 import {
   activityT,
   ageT,
-  churnT,
   lutIndex,
   type Mode,
   type Palette,
@@ -94,8 +93,6 @@ export class MapRenderer {
         return pal.author[tables.authorSlot[l.author[i]!] ?? 10]!;
       case 'age':
         return pal.age[lutIndex(ageT(l.firstTime[i]!, from, to))]!;
-      case 'churn':
-        return pal.churn[lutIndex(churnT(l.churn[i]!, tables.maxChurn))]!;
       case 'type':
         return pal.type[l.type[i]!] ?? pal.type[0]!;
     }
@@ -122,9 +119,6 @@ export class MapRenderer {
         break;
       case 'age':
         light = mask.age[lutIndex(ageT(l.firstTime[i]!, from, to))]!;
-        break;
-      case 'churn':
-        light = mask.churn[lutIndex(churnT(l.churn[i]!, tables.maxChurn))]!;
         break;
       case 'type':
         light = mask.type[l.type[i]!] ?? 0;

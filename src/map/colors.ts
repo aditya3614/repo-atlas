@@ -9,19 +9,18 @@ import { interpolateRgb } from 'd3-interpolate';
  * no allocation in the frame loop.
  */
 
-export const MODES = ['activity', 'author', 'age', 'churn', 'type'] as const;
+export const MODES = ['activity', 'author', 'age', 'type'] as const;
 export type Mode = (typeof MODES)[number];
 
 /*
- * Labels say what the colour means, not what the measure is called. "Churn" and
- * "activity" are words this project's authors use; nobody arriving at the map
- * for the first time knows them.
+ * Labels say what the colour means, not what the measure is called. "Activity"
+ * is a word this project's authors use; nobody arriving at the map for the
+ * first time knows it.
  */
 export const MODE_LABELS: Record<Mode, string> = {
   activity: 'Recently changed',
   author: 'Who wrote it',
   age: 'How old',
-  churn: 'How often rewritten',
   type: 'Kind of file',
 };
 
@@ -31,8 +30,6 @@ export const MODE_HINTS: Record<Mode, string> = {
     'How recently each file changed, as of the date on the playhead. Files touched just now are brightest and fade as they go quiet.',
   author: 'Whoever has added the most lines to each file over its whole life.',
   age: 'When each file first appeared in the project.',
-  churn:
-    'How much a file has been rewritten: every line added or removed across its whole life, added up.',
   type: 'What kind of file it is, worked out from its name and extension.',
 };
 
@@ -122,7 +119,6 @@ function ramp(stops: string[], inks: [string, string], domain?: number[]): strin
 export interface Palette {
   activity: string[];
   age: string[];
-  churn: string[];
   /** Ten author colours plus one for everyone else. */
   author: string[];
   type: string[];
@@ -148,7 +144,6 @@ export interface Palette {
   needsDarkInk: {
     activity: Uint8Array;
     age: Uint8Array;
-    churn: Uint8Array;
     author: Uint8Array;
     type: Uint8Array;
   };
@@ -178,7 +173,6 @@ export function buildPalette(v: (token: string) => string, theme: string): Palet
     [0, 0.42, 0.68, 0.86, 1],
   );
   const age = ramp([v('--age-old'), v('--age-mid'), v('--age-new')], inks);
-  const churn = ramp([v('--churn-0'), v('--churn-1'), v('--churn-2')], inks);
   const author = [
     v('--cat-1'), v('--cat-2'), v('--cat-3'), v('--cat-4'), v('--cat-5'),
     v('--cat-6'), v('--cat-7'), v('--cat-8'), v('--cat-9'), v('--cat-10'),
@@ -191,7 +185,6 @@ export function buildPalette(v: (token: string) => string, theme: string): Palet
   return {
     activity,
     age,
-    churn,
     author,
     type,
     dust: v('--map-dust'),
@@ -211,7 +204,6 @@ export function buildPalette(v: (token: string) => string, theme: string): Palet
     needsDarkInk: {
       activity: inkMask(activity, inkDark, inkLight),
       age: inkMask(age, inkDark, inkLight),
-      churn: inkMask(churn, inkDark, inkLight),
       author: inkMask(author, inkDark, inkLight),
       type: inkMask(type, inkDark, inkLight),
     },
@@ -240,12 +232,6 @@ export function ageT(firstTime: number, from: number, to: number): number {
   if (to <= from) return 1;
   const t = (firstTime - from) / (to - from);
   return t < 0 ? 0 : t > 1 ? 1 : t;
-}
-
-export function churnT(churn: number, maxChurn: number): number {
-  if (maxChurn <= 0) return 0;
-  const t = Math.log1p(churn) / Math.log1p(maxChurn);
-  return t > 1 ? 1 : t;
 }
 
 export function lutIndex(t: number): number {

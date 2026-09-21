@@ -1,45 +1,43 @@
 /*
  * Repo Atlas design tokens.
  *
- * Palette and type come from the Wise design system: deep forest green as the
- * anchor, lime as the single high-energy accent, Inter everywhere. Wise Sans is
- * not distributable, so Inter 900 with tight leading stands in for display text.
+ * Black and pink: near-black surfaces with a plum cast, one hot pink as the
+ * single high-energy accent, Instrument Sans everywhere. Pink means new or
+ * added; a warm orange-red means deleted, so the two never blur together.
  *
  * Two themes share one set of semantic names. Accents keep a fixed meaning in
  * both themes so a colour always says the same thing:
- *   lime   -> new / added        red -> deleted / removed
- *   cyan   -> selection / info   heat ramp -> recent activity
+ *   pink   -> new / added        red -> deleted / removed
+ *   sky    -> selection / info   heat ramp -> recent activity
  */
 
 :root {
-  /* --- Wise brand scale (raw values; only referenced by semantic tokens) --- */
-  --w-forest: #163300;
-  --w-forest-deep: #0d1f00;
-  --w-ink: #0e0f0c;
-  --w-charcoal: #21231d;
-  --w-gray: #454745;
-  --w-white: #ffffff;
-  --w-lime: #9fe870;
-  --w-lime-soft: #e2f6d5;
-  --w-cyan: #a0e1e1;
-  --w-yellow: #fadc65;
-  --w-warning: #ffd11a;
-  --w-error: #cb272f;
-  --w-error-dark: #b8232b;
+  /* --- Brand scale (raw values; only referenced by semantic tokens) --- */
+  --p-black: #000000;
+  --p-plum-deep: #14080f;
+  --p-plum: #2a0a17;
+  --p-pink: #f0518f;
+  --p-pink-hot: #ff7bad;
+  --p-pink-deep: #c2185b;
+  --p-blush: #fde8f0;
+  --p-white: #ffffff;
+  --p-sky: #8fd3ff;
+  --p-amber: #ffc857;
+  --p-error: #cb272f;
 
   /* --- Type --- */
-  --font-ui: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-ui: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'Source Code Pro', ui-monospace, SFMono-Regular, Menlo, monospace;
   /* Reserved for the story sentences, which are prose rather than interface. */
   --font-story: Newsreader, Georgia, 'Times New Roman', serif;
 
-  /* --- Spacing: Wise 8px base --- */
+  /* --- Spacing: 8px base --- */
   --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
   --s-5: 20px; --s-6: 24px; --s-7: 32px; --s-8: 40px;
   --s-9: 56px; --s-10: 92px; --s-11: 100px;
 
-  /* --- Radii: Wise pills for actions, 10px for cards --- */
+  /* --- Radii: pills for actions, generous corners for cards --- */
   --r-xs: 4px;
   --r-sm: 8px;
   --r-md: 10px;
@@ -54,8 +52,11 @@
   --t-slow: 450ms;
 
   --max-w: 1440px;
-  --panel-w: 360px;
+  --panel-w: 420px;
   --dock-h: 132px;
+  /* One gutter for every edge of the map screen, so everything lines up. */
+  --gutter: 32px;
+  --gap: 20px;
 
   /* --- Author categorical palette (10 + one for everyone else) ---
      Chosen by maximising the smallest perceptual distance between any two of
@@ -64,7 +65,7 @@
      for protanopes. The search and its threshold live in palette.test.ts. */
   --cat-1: #56b4e9;
   --cat-2: #f2b701;
-  --cat-3: #009e73;
+  --cat-3: #e0409a;
   --cat-4: #4b4b8f;
   --cat-5: #ddcc77;
   --cat-6: #a0e1e1;
@@ -79,7 +80,7 @@
    * chrome, and labels on them pick their own ink. Checked with the author
    * palette in src/styles/palette.test.ts.
    */
-  --type-code: #009e73;
+  --type-code: #e0409a;
   --type-tests: #56b4e9;
   --type-docs: #f2b701;
   --type-config: #aaaaaa;
@@ -90,8 +91,8 @@
    * fixed ink cannot work at both ends of a ramp, so each cell picks the one
    * that contrasts with it. Both are checked against every cell colour.
    */
-  --label-on-light: #14170f;
-  --label-on-dark: #f6f8f2;
+  --label-on-light: #16090f;
+  --label-on-dark: #fdf5f8;
 }
 
 /* ---------------- Night (default) ---------------- */
@@ -99,53 +100,61 @@
 :root[data-theme='night'] {
   color-scheme: dark;
 
-  --bg: #0e0f0c;
-  --bg-deep: #090a08;
-  --surface: #163300;
-  --surface-2: #21231d;
-  --surface-3: #2c2f27;
+  --bg: #000000;
+  --bg-deep: #000000;
+  --surface: #140a10;
+  --surface-2: #1a1016;
+  --surface-3: #261821;
 
   --text: #ffffff;
-  --text-muted: #a9aea4;
-  --text-faint: #8b9086;   /* 5.6:1 on --bg */
+  --text-muted: #a9a0a5;
+  --text-faint: #8f868b;   /* 5.9:1 on --bg */
 
-  --hairline: rgba(250, 249, 245, 0.12);
-  --hairline-strong: rgba(250, 249, 245, 0.24);
+  --hairline: rgba(255, 236, 244, 0.12);
+  --hairline-strong: rgba(255, 236, 244, 0.24);
 
-  --accent: #9fe870;          /* new / additions / primary emphasis */
-  --accent-ink: #163300;      /* text on top of --accent */
-  --accent-soft: rgba(159, 232, 112, 0.15);
-  --info: #a0e1e1;            /* selection / info */
+  --accent: #f0518f;          /* new / additions / primary emphasis */
+  --accent-ink: #1a0410;      /* text on top of --accent */
+  --accent-soft: rgba(240, 81, 143, 0.16);
+  --info: #8fd3ff;            /* selection / info */
   --danger: #cb272f;          /* deleted / removed */
-  --warn: #ffd11a;
+  --danger-text: #ff9a78;     /* danger as text: orange, so it never reads as pink */
+  --warn: #ffc857;
 
-  --focus: #9fe870;
-  --focus-glow: rgba(159, 232, 112, 0.3);
+  /* The landing page's main call to action: a pale pill, as in the reference. */
+  --cta: #efeaec;
+  --cta-ink: #0b0407;
+  --cta-hover: #ffffff;
 
-  /* Activity heat ramp: cold neutral -> lime -> warm yellow -> hot */
-  --heat-0: #2c2f27;
-  --heat-1: #3f5a2a;
-  --heat-2: #9fe870;
-  --heat-3: #fadc65;
-  --heat-4: #ffd11a;
+  --focus: #f0518f;
+  --focus-glow: rgba(240, 81, 143, 0.32);
 
-  --map-void: #0b0c0a;
-  --map-dust: #23261f;          /* cells too small to draw, as one flat fill */
-  --map-folder-line: rgba(250, 249, 245, 0.16);
+  /* Activity heat ramp: cold neutral -> plum -> pink -> coral -> amber */
+  --heat-0: #2a1c24;
+  --heat-1: #6a2547;
+  --heat-2: #f0518f;
+  --heat-3: #ff9a78;
+  --heat-4: #ffc857;
 
-  /* Age: new files are lime, old files fade to a dry sand */
-  --age-new: #9fe870;
-  --age-mid: #5c6a44;
-  --age-old: #4a4a42;
+  /* Landing backdrop: the wireframe globe and the skyline along the bottom. */
+  --globe-line: rgba(255, 226, 238, 0.6);
+  --globe-node: rgba(255, 240, 246, 0.95);
+  --globe-accent: #f0518f;
+  --skyline: #ee4f8d;
+  --skyline-lit: #ff7bad;
 
-  /* Churn: its own hue so it is never mistaken for activity */
-  --churn-0: #20241f;
-  --churn-1: #3c6d6f;
-  --churn-2: #a0e1e1;
+  --map-void: #050205;
+  --map-dust: #24161d;          /* cells too small to draw, as one flat fill */
+  --map-folder-line: rgba(255, 236, 244, 0.16);
+
+  /* Age: new files are pink, old files fade to a dusty plum-grey */
+  --age-new: #f0518f;
+  --age-mid: #7b2f54;
+  --age-old: #463a41;
 
 
-  --shadow-raised: rgba(0, 0, 0, 0.45) 0 8px 24px 0;
-  --shadow-modal: rgba(0, 0, 0, 0.55) 0 16px 56px 0;
+  --shadow-raised: rgba(0, 0, 0, 0.55) 0 8px 24px 0;
+  --shadow-modal: rgba(0, 0, 0, 0.65) 0 16px 56px 0;
 }
 
 /* ---------------- Paper ---------------- */
@@ -153,47 +162,54 @@
   color-scheme: light;
 
   --bg: #ffffff;
-  --bg-deep: #f4f7f0;
+  --bg-deep: #fdf3f7;
   --surface: #ffffff;
-  --surface-2: #e2f6d5;
-  --surface-3: #d3ecc2;
+  --surface-2: #fde8f0;
+  --surface-3: #f9d3e2;
 
-  --text: #163300;
-  --text-muted: #454745;
-  --text-faint: #5c6059;
+  --text: #2a0a17;
+  --text-muted: #5f4a54;
+  --text-faint: #6e5a64;
 
-  --hairline: rgba(22, 51, 0, 0.12);
-  --hairline-strong: rgba(22, 51, 0, 0.24);
+  --hairline: rgba(42, 10, 23, 0.12);
+  --hairline-strong: rgba(42, 10, 23, 0.24);
 
-  --accent: #163300;
-  --accent-ink: #9fe870;
-  --accent-soft: rgba(159, 232, 112, 0.25);
-  --info: #2f6f8f;
+  --accent: #c2185b;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(194, 24, 91, 0.12);
+  --info: #1f6fa8;
   --danger: #cb272f;
+  --danger-text: #b3350f;
   --warn: #b98400;
 
-  --focus: #163300;
-  --focus-glow: rgba(159, 232, 112, 0.45);
+  --cta: #2a0a17;
+  --cta-ink: #ffffff;
+  --cta-hover: #14050b;
 
-  --heat-0: #dde3d6;
-  --heat-1: #c0dfa2;
-  --heat-2: #9fe870;
-  --heat-3: #fadc65;
-  --heat-4: #e8a100;
+  --focus: #c2185b;
+  --focus-glow: rgba(194, 24, 91, 0.3);
 
-  --map-void: #eef2e8;
-  --map-dust: #d7e2cc;
-  --map-folder-line: rgba(22, 51, 0, 0.22);
+  --heat-0: #ecdfe5;
+  --heat-1: #f6bcd3;
+  --heat-2: #ef5a95;
+  --heat-3: #ffa06e;
+  --heat-4: #e8940a;
 
-  --age-new: #4e9b23;
-  --age-mid: #9ab87c;
-  --age-old: #d8d8cd;
+  --globe-line: rgba(42, 10, 23, 0.42);
+  --globe-node: rgba(42, 10, 23, 0.75);
+  --globe-accent: #c2185b;
+  --skyline: #ec4d8d;
+  --skyline-lit: #f78cb5;
 
-  --churn-0: #e4ebe0;
-  --churn-1: #7fbcbc;
-  --churn-2: #1f6f6f;
+  --map-void: #faf0f4;
+  --map-dust: #ecd6df;
+  --map-folder-line: rgba(42, 10, 23, 0.22);
+
+  --age-new: #c2185b;
+  --age-mid: #e8a1bf;
+  --age-old: #ddd0d6;
 
 
-  --shadow-raised: rgba(22, 51, 0, 0.08) 0 8px 24px 0;
-  --shadow-modal: rgba(22, 51, 0, 0.15) 0 16px 56px 0;
+  --shadow-raised: rgba(42, 10, 23, 0.08) 0 8px 24px 0;
+  --shadow-modal: rgba(42, 10, 23, 0.16) 0 16px 56px 0;
 }
