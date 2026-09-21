@@ -6,7 +6,7 @@ import { FileIndex } from './fileIndex';
 import { computeLayout, transferables } from './layout';
 import { buildTimeline } from './timeline';
 import { buildCoChange } from './cochange';
-import { hotspots, ownership, searchPaths, singleOwner, storyFacts } from './meaning';
+import { folderTable, hotspots, ownership, searchPaths, singleOwner, storyFacts } from './meaning';
 import type { FromWorker, InputError, Progress, Summary, Tables, ToWorker } from '../lib/protocol';
 
 /**
@@ -333,6 +333,7 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
         hotspots: spots.list,
         windowDays: spots.windowDays,
         singleOwner: singleOwner(own, 12),
+        folders: folderTable(own, 200),
         facts: storyFacts(d, index, state, timeline, own, cp.peakAlive, cp.peakAliveAt),
       },
     });

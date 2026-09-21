@@ -164,6 +164,8 @@ export interface MeaningPayload {
   hotspots: Hotspot[];
   windowDays: number;
   singleOwner: FolderOwnership[];
+  /** Every sizeable folder, for the table view. */
+  folders: FolderOwnership[];
   facts: StoryFact[];
 }
 

@@ -7,6 +7,10 @@ import { Legend } from '../components/Legend';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { SidePanel } from '../components/SidePanel';
 import { Search } from '../components/Search';
+import { ExportMenu } from '../components/ExportMenu';
+import { HelpSheet } from '../components/HelpSheet';
+import { TableView } from '../components/TableView';
+import { FirstRun } from '../components/FirstRun';
 import { useMeaning } from '../store/meaning';
 import { AnimatePresence } from 'framer-motion';
 import { Dock } from '../components/Dock';
@@ -42,6 +46,8 @@ export function Main() {
   const setShowArcs = useMap((s) => s.setShowArcs);
   const selectedFile = useMap((s) => s.selectedFile);
   const searchOpen = useMeaning((s) => s.searchOpen);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [tableOpen, setTableOpen] = useState(false);
 
   useEffect(() => setPal(readPalette(document.documentElement)), [theme]);
 
@@ -128,6 +134,15 @@ export function Main() {
         useMeaning.getState().setSearchOpen(true);
         return;
       }
+      if (e.key === '?') {
+        e.preventDefault();
+        setHelpOpen((v) => !v);
+        return;
+      }
+      if (e.key === 't' || e.key === 'T') {
+        setTableOpen((v) => !v);
+        return;
+      }
 
       switch (e.key) {
         case ' ':
@@ -165,6 +180,14 @@ export function Main() {
           useMap.getState().setShowArcs(!useMap.getState().showArcs);
           return;
         case 'Escape': {
+          if (helpOpen) {
+            setHelpOpen(false);
+            return;
+          }
+          if (tableOpen) {
+            setTableOpen(false);
+            return;
+          }
           if (useMeaning.getState().searchOpen) {
             useMeaning.getState().setSearchOpen(false);
             return;
@@ -176,7 +199,7 @@ export function Main() {
         }
       }
     },
-    [nudge, setMode, setRoot],
+    [helpOpen, nudge, setMode, setRoot, tableOpen],
   );
 
   useEffect(() => {
@@ -207,6 +230,24 @@ export function Main() {
 
         <div className="top-right">
           <ColorModes mode={mode} onChange={setMode} />
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => setTableOpen(true)}
+            title="Read the same information as a table — t"
+          >
+            Table
+          </button>
+          <ExportMenu summary={summary} />
+          <button
+            type="button"
+            className="btn btn-ghost icon-btn"
+            onClick={() => setHelpOpen(true)}
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts — ?"
+          >
+            ?
+          </button>
           <button type="button" className="btn btn-ghost" onClick={reset}>
             Load another
           </button>
@@ -265,6 +306,13 @@ export function Main() {
       </main>
 
       <AnimatePresence>{searchOpen && <Search />}</AnimatePresence>
+      <AnimatePresence>{helpOpen && <HelpSheet onClose={() => setHelpOpen(false)} />}</AnimatePresence>
+      <AnimatePresence>
+        {tableOpen && (
+          <TableView summary={summary} tables={tables} onClose={() => setTableOpen(false)} />
+        )}
+      </AnimatePresence>
+      <FirstRun />
 
       {pal && tables && (
         <Dock

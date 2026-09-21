@@ -31,14 +31,15 @@ contributors along the bottom](docs/map-night.png)
   - [Story](#8-story)
   - [Hotspots and single-owner folders](#9-hotspots-and-single-owner-folders)
   - [Search](#10-search)
-  - [Themes, motion and readability](#11-themes-motion-and-readability)
+  - [Saving what you see](#11-saving-what-you-see)
+  - [Reading it as a table](#12-reading-it-as-a-table)
+  - [Help and first-run hints](#13-help-and-first-run-hints)
+  - [Themes, motion and readability](#14-themes-motion-and-readability)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Using it on your own project](#using-it-on-your-own-project)
 - [Privacy](#privacy)
 - [Honest numbers: what is estimated and why](#honest-numbers-what-is-estimated-and-why)
 - [How it works inside](#how-it-works-inside)
-- [Speed](#speed)
-- [Running and testing it](#running-and-testing-it)
 - [Where things live in the code](#where-things-live-in-the-code)
 - [Decisions and limitations](#decisions-and-limitations)
 
@@ -255,7 +256,40 @@ Press **/** and type part of a path. Matching is fuzzy, so `adhttp` finds
 map dims, so you keep the shape of the project while you look. Press **Enter**
 to select the best match, **Esc** to close.
 
-### 11. Themes, motion and readability
+### 11. Saving what you see
+
+The **Export** menu offers two things, both produced entirely in your browser:
+
+| | |
+| --- | --- |
+| **PNG image** | The map exactly as it looks now, with the project name, the date on the playhead, the colour mode and the "sizes are estimated" caveat drawn into the picture, so the image still explains itself once it is out of context. |
+| **WebM recording** | Rewinds to the first commit, plays the history, and records it. Press **Stop recording** whenever you have enough and the video saves. |
+
+Neither is uploaded anywhere. The image is composed on a canvas in the page and
+handed to your browser as a download; the video is recorded from the canvas with
+the browser's own recorder.
+
+### 12. Reading it as a table
+
+![The table view: story facts, hotspots, folders and contributors as ordinary HTML tables](docs/table.png)
+
+Press **t**, or click **Table**. The same information the map shows becomes four
+ordinary HTML tables — the story facts, the hotspots, every folder with its bus
+factor, and the contributors. Every row that names a file or a folder is a link
+back into the map.
+
+This exists because a `<canvas>` is a picture: a screen reader cannot read it,
+and you cannot select or copy from it. Section 11 of the brief asks for the
+information to be available without the canvas, and this is that.
+
+### 13. Help and first-run hints
+
+Press **?** for a sheet listing every shortcut, grouped by what it does. The
+first time you open a history, three hints appear above the dock — space plays,
+folder labels zoom, `?` lists everything — and once dismissed they stay
+dismissed.
+
+### 14. Themes, motion and readability
 
 ![The same map in the Paper theme](docs/map-paper.png)
 
@@ -282,7 +316,9 @@ to select the best match, **Esc** to close.
 | **1**–**5** | Colour the map by Activity, Author, Age, Churn, Type |
 | **c** | Show or hide the connection arcs |
 | **/** | Search for a file |
-| **Esc** | Clear the selection, then zoom out of a folder |
+| **t** | Read the same information as a table |
+| **?** | Show every shortcut |
+| **Esc** | Close what is open, clear the selection, then zoom out |
 
 Every control is also reachable with **Tab**, and gets a visible focus ring.
 
@@ -689,9 +725,9 @@ Pro for paths and numbers, Newsreader for the story sentences.
 
 ## Decisions and limitations
 
-**Not built yet** (the remaining milestone): exporting the map as an image or a
-video of the playback, a plain HTML table view of the same information for
-people who cannot use the canvas, and an in-app help sheet.
+Everything described above is built. The application is feature-complete against
+its brief.
+
 
 **Known limitations**, all consequences of using only commit metadata:
 

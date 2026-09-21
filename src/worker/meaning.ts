@@ -192,6 +192,11 @@ export function ownership(
   return out;
 }
 
+/** Every folder worth listing, biggest first, for the table view. */
+export function folderTable(own: Map<string, FolderOwnership>, limit: number): FolderOwnership[] {
+  return [...own.values()].sort((a, b) => b.lines - a.lines).slice(0, limit);
+}
+
 /** Folders only one person has really written, biggest first. */
 export function singleOwner(own: Map<string, FolderOwnership>, limit: number): FolderOwnership[] {
   return [...own.values()]

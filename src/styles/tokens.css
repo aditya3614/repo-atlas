@@ -57,20 +57,33 @@
   --panel-w: 360px;
   --dock-h: 132px;
 
-  /* --- Author categorical palette (10 + rest) ---
-     Wise accents extended with same-family tints so hues stay distinguishable
-     under deuteranopia; verified again in M2 against simulation. */
-  --cat-1: #9fe870;
-  --cat-2: #a0e1e1;
-  --cat-3: #fadc65;
-  --cat-4: #cb272f;
-  --cat-5: #5aa9d6;
-  --cat-6: #c98bdb;
-  --cat-7: #f2994a;
-  --cat-8: #3f7d3f;
-  --cat-9: #e26fa0;
-  --cat-10: #8c9ea3;
-  --cat-rest: #6b6e68;
+  /* --- Author categorical palette (10 + one for everyone else) ---
+     Chosen by maximising the smallest perceptual distance between any two of
+     them under normal vision and all three dichromacies at once, rather than
+     by eye: the Wise-derived set that came before collapsed lime into yellow
+     for protanopes. The search and its threshold live in palette.test.ts. */
+  --cat-1: #56b4e9;
+  --cat-2: #f2b701;
+  --cat-3: #009e73;
+  --cat-4: #4b4b8f;
+  --cat-5: #ddcc77;
+  --cat-6: #a0e1e1;
+  --cat-7: #cb272f;
+  --cat-8: #00737f;
+  --cat-9: #d55e00;
+  --cat-10: #882255;
+  --cat-rest: #aaaaaa;
+
+  /*
+   * File kinds share one set across both themes: these are data colours, not
+   * chrome, and labels on them pick their own ink. Checked with the author
+   * palette in src/styles/palette.test.ts.
+   */
+  --type-code: #009e73;
+  --type-tests: #56b4e9;
+  --type-docs: #f2b701;
+  --type-config: #aaaaaa;
+  --type-assets: #882255;
 
   /*
    * Map labels sit directly on a cell, whose colour is data, not chrome. One
@@ -130,11 +143,6 @@
   --churn-1: #3c6d6f;
   --churn-2: #a0e1e1;
 
-  --type-code: #9fe870;
-  --type-tests: #a0e1e1;
-  --type-docs: #fadc65;
-  --type-config: #8c9ea3;
-  --type-assets: #c98bdb;
 
   --shadow-raised: rgba(0, 0, 0, 0.45) 0 8px 24px 0;
   --shadow-modal: rgba(0, 0, 0, 0.55) 0 16px 56px 0;
@@ -185,11 +193,6 @@
   --churn-1: #7fbcbc;
   --churn-2: #1f6f6f;
 
-  --type-code: #4e9b23;
-  --type-tests: #1f6f6f;
-  --type-docs: #b98400;
-  --type-config: #5f5a52;
-  --type-assets: #8b4fa8;
 
   --shadow-raised: rgba(22, 51, 0, 0.08) 0 8px 24px 0;
   --shadow-modal: rgba(22, 51, 0, 0.15) 0 16px 56px 0;
