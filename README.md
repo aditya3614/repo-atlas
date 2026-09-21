@@ -27,14 +27,13 @@ contributors along the bottom](docs/map-night.png)
   - [Going into a folder](#4-going-into-a-folder)
   - [Playing the history](#5-playing-the-history)
   - [The chart at the bottom](#6-the-chart-at-the-bottom)
-  - [Connections between files](#7-connections-between-files)
-  - [Story](#8-story)
-  - [Hotspots and single-owner folders](#9-hotspots-and-single-owner-folders)
-  - [Search](#10-search)
-  - [Saving what you see](#11-saving-what-you-see)
-  - [Reading it as a table](#12-reading-it-as-a-table)
-  - [Help and first-run hints](#13-help-and-first-run-hints)
-  - [Themes, motion and readability](#14-themes-motion-and-readability)
+  - [Story](#7-story)
+  - [Hotspots and single-owner folders](#8-hotspots-and-single-owner-folders)
+  - [Search](#9-search)
+  - [Saving what you see](#10-saving-what-you-see)
+  - [Reading it as a table](#11-reading-it-as-a-table)
+  - [Help and first-run hints](#12-help-and-first-run-hints)
+  - [Themes, motion and readability](#13-themes-motion-and-readability)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Using it on your own project](#using-it-on-your-own-project)
 - [Privacy](#privacy)
@@ -87,12 +86,10 @@ bigger file.
   and removed over the file's life. Repo Atlas says so everywhere it shows a
   size. See [Honest numbers](#honest-numbers-what-is-estimated-and-why).
 
-Two controls change how the rectangles are sized:
-
-| Setting | What it does |
-| --- | --- |
-| **Balanced** (default) | Big files are still bigger, but the difference is softened, so small files stay visible. |
-| **Linear** | Area is directly proportional to the estimated line count. One enormous generated file can swallow the picture. |
+Rectangle areas use the square-ish root of the estimated size rather than the
+raw line count. Without that, one machine-generated file swallows the whole
+picture; with it, big files are still visibly bigger and small ones stay
+readable.
 
 When a project has more files than there are pixels, the tiniest ones cannot be
 drawn honestly. Rather than fake them, Repo Atlas merges them into their
@@ -101,17 +98,20 @@ at this size — zoom into a folder to see them."*
 
 ### 2. Five ways to colour the map
 
-Press **1**–**5**, or use the buttons in the top bar. Each mode has a legend
-explaining what the colours mean, because colour is never the only way the
-information is available.
+![Colouring the map by how often each file has been rewritten, with the legend naming the mode, explaining it and labelling both ends of the scale](docs/colour-modes.png)
+
+Press **1**–**5**, or use the **Colour by** buttons above the map. Whichever you
+pick, the strip under the map names it, explains it in a sentence, and labels
+both ends of the scale with real values — so you never have to guess what a
+colour is telling you.
 
 | Mode | What the colour shows | Reading it |
 | --- | --- | --- |
-| **1 Activity** (default) | How recently and how often a file changed | Dark = quiet for a long time. Green = recently touched. Yellow and amber = changed a lot, very recently. |
-| **2 Author** | Who has added the most lines to each file | Ten colours for the ten biggest contributors, grey for everyone else. Bots are labelled "BOT" in the legend. |
-| **3 Age** | When the file first appeared | Bright = new. Faded = present since early on. |
-| **4 Churn** | Total lines added plus removed over the file's whole life | Pale = written once and left alone. Deep teal = rewritten again and again. |
-| **5 Type** | What kind of file it is, from its name | Code, Tests, Docs, Config, Assets. |
+| **1 Recently changed** (default) | How recently each file was touched, as of the date on the playhead | Dark = quiet for a long time. Green = touched recently. Yellow and amber = changed a lot, very recently. |
+| **2 Who wrote it** | Whoever added the most lines to each file | Ten colours for the ten biggest contributors, grey for everyone else. Bots are labelled "BOT". |
+| **3 How old** | When each file first appeared | Bright = added recently. Faded = there from early on. |
+| **4 How often rewritten** | Every line added or removed across the file's life, added up | Pale = written once and left alone. Deep teal = rewritten again and again. |
+| **5 Kind of file** | What sort of file it is, from its name | Code, Tests, Docs, Config, Assets. |
 
 Activity fades over time: a file that was edited constantly last year but not
 since will cool off as you move the playhead forward. This is why the map
@@ -191,25 +191,7 @@ It is also the **scrubber**:
 The shape tells its own story: you can see when a project was a solo effort,
 when a team arrived, when someone left, and when everything went quiet.
 
-### 7. Connections between files
-
-![Arcs drawn between files that are usually changed in the same commit](docs/connections.png)
-
-Click **Connections** (or press **c**) to draw arcs between files that tend to
-be changed *in the same commit*. If two files always get edited together, they
-are coupled in practice, whatever the folder structure says.
-
-- With a file selected, only that file's connections are drawn.
-- With nothing selected, the strongest connections in the whole project are
-  drawn.
-- Thicker and brighter arcs mean the pair changed together more often.
-
-A caption states exactly what was counted, for example: *"From 856 commits that
-touched between 2 and 20 files; the strongest 45 pairs are drawn."* Commits that
-touch more than 20 files are deliberately ignored — a sweeping rename relates
-everything to everything and would tell you nothing.
-
-### 8. Story
+### 7. Story
 
 The **Story** tab writes six to nine plain-English sentences about the project,
 each one a card you can click to jump to the moment it describes. For the
@@ -232,7 +214,7 @@ These are generated from the data, not written by hand, and every sentence
 states the measurement behind it. See
 [the accuracy check](#the-demos-story-cards-checked-by-hand).
 
-### 9. Hotspots and single-owner folders
+### 8. Hotspots and single-owner folders
 
 ![The Hotspots tab in the Paper theme, ranking the files changed most in the last twelve months, each with a plain-English explanation](docs/hotspots.png)
 
@@ -249,14 +231,14 @@ one person wrote 80% of the lines ever added to it — the "bus factor", as in
 *how many people would have to be hit by a bus before the knowledge is gone*. A
 bus factor of 1 is a risk worth knowing about. Bots are not counted as people.
 
-### 10. Search
+### 9. Search
 
 Press **/** and type part of a path. Matching is fuzzy, so `adhttp` finds
 `lib/adapters/http.js`. Matching files stay bright and everything else on the
 map dims, so you keep the shape of the project while you look. Press **Enter**
 to select the best match, **Esc** to close.
 
-### 11. Saving what you see
+### 10. Saving what you see
 
 The **Export** menu offers two things, both produced entirely in your browser:
 
@@ -269,7 +251,7 @@ Neither is uploaded anywhere. The image is composed on a canvas in the page and
 handed to your browser as a download; the video is recorded from the canvas with
 the browser's own recorder.
 
-### 12. Reading it as a table
+### 11. Reading it as a table
 
 ![The table view: story facts, hotspots, folders and contributors as ordinary HTML tables](docs/table.png)
 
@@ -282,14 +264,14 @@ This exists because a `<canvas>` is a picture: a screen reader cannot read it,
 and you cannot select or copy from it. Section 11 of the brief asks for the
 information to be available without the canvas, and this is that.
 
-### 13. Help and first-run hints
+### 12. Help and first-run hints
 
 Press **?** for a sheet listing every shortcut, grouped by what it does. The
 first time you open a history, three hints appear above the dock — space plays,
 folder labels zoom, `?` lists everything — and once dismissed they stay
 dismissed.
 
-### 14. Themes, motion and readability
+### 13. Themes, motion and readability
 
 ![The same map in the Paper theme](docs/map-paper.png)
 
@@ -314,7 +296,6 @@ dismissed.
 | **Home** / **End** | Go to the first or last commit |
 | **[** / **]** | Slower or faster |
 | **1**–**5** | Colour the map by Activity, Author, Age, Churn, Type |
-| **c** | Show or hide the connection arcs |
 | **/** | Search for a file |
 | **t** | Read the same information as a table |
 | **?** | Show every shortcut |
@@ -573,9 +554,9 @@ Two decisions matter:
   in a still image, but during playback every rectangle would leap across the
   screen whenever a neighbour grew. Fixed order means the map is *stable*, and
   movement always means something real happened.
-- **Area uses size^0.6 by default.** Raw line counts let one machine-generated
-  file swallow the picture. The exponent compresses the extremes while keeping
-  the ordering truthful. "Linear" turns it off.
+- **Area uses size^0.6.** Raw line counts let one machine-generated file
+  swallow the picture. The exponent compresses the extremes while leaving the
+  ordering truthful.
 
 Folders get 1 pixel between cells, 2 pixels of margin, and a 15-pixel strip
 along the top for the folder's name — but only when the folder is big enough for
@@ -648,15 +629,6 @@ line from each column, which removes the long-range drift and keeps the local
 wiggle. This is the difference between the chart being useless and being the
 best summary on the screen.
 
-### Files that change together
-
-`src/worker/cochange.ts`
-
-For each commit, every pair of files it touched gets a point. Two limits keep
-this honest and affordable: commits touching more than 20 files are skipped
-(quadratic cost, no meaning), and only the 600 busiest files are considered.
-The strongest pairs are drawn as curved arcs.
-
 ### Hotspots, ownership and the story
 
 `src/worker/meaning.ts`
@@ -698,7 +670,6 @@ src/
     fileIndex.ts     per-file lookups, dominant author, file kinds
     layout.ts        the treemap
     timeline.ts      weekly bins and the two playback timelines
-    cochange.ts      files that change together
     meaning.ts       hotspots, ownership, story facts, search
     atlas.worker.ts  the message handler tying those together
   map/             the map's rendering and interaction (no React)

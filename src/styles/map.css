@@ -40,17 +40,27 @@
 /* ---- legend under the map ---- */
 /* Fixed height: the map must not resize when the legend's contents change. */
 .legend {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
   align-items: center;
-  gap: var(--s-5);
+  gap: var(--s-6);
   padding: var(--s-3) var(--s-7);
   border-top: 1px solid var(--hairline);
   height: 76px;
   overflow: hidden;
 }
-.legend-hint { margin: 0; color: var(--text-muted); max-width: 42ch; }
+.legend-what { min-width: 0; }
+.legend-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.legend-hint { margin: 2px 0 0; color: var(--text-muted); line-height: 16px; }
+.legend-scale { min-width: 0; justify-self: start; width: 100%; max-width: 520px; }
 
-.ramp { display: grid; gap: 4px; min-width: 220px; }
+.ramp { display: grid; gap: 4px; min-width: 220px; width: 100%; }
 .ramp-bar { display: flex; height: 8px; border-radius: var(--r-pill); overflow: hidden; }
 .ramp-bar > span { flex: 1; }
 .ramp-ends { display: flex; justify-content: space-between; color: var(--text-faint); }

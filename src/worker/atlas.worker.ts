@@ -5,7 +5,6 @@ import { Checkpoints } from './state';
 import { FileIndex } from './fileIndex';
 import { computeLayout, transferables } from './layout';
 import { buildTimeline } from './timeline';
-import { buildCoChange } from './cochange';
 import { folderTable, hotspots, ownership, searchPaths, singleOwner, storyFacts } from './meaning';
 import type { FromWorker, InputError, Progress, Summary, Tables, ToWorker } from '../lib/protocol';
 
@@ -28,8 +27,6 @@ export interface Loaded {
   summary: Summary;
 }
 let loaded: Loaded | null = null;
-/** Co-change is expensive and never changes, so it is built once on demand. */
-let cochange: ReturnType<typeof buildCoChange> | null = null;
 let timeline: ReturnType<typeof buildTimeline> | null = null;
 
 const post = (m: FromWorker, transfer?: Transferable[]) =>
@@ -192,7 +189,7 @@ async function parse(msg: Extract<ToWorker, { type: 'parse' }>): Promise<void> {
     authorBot: dataset.authors.bot,
     authorSlot,
     binaryWeight: BINARY_WEIGHT,
-    maxChurn: maxChurn(dataset),
+    maxChurn: churnScale(dataset),
   };
   post({ type: 'done', summary, tables });
 }
@@ -254,13 +251,21 @@ function detailOf(fileId: number, commit: number) {
   };
 }
 
-function maxChurn(d: Dataset): number {
-  let max = 0;
+/*
+ * The top of the churn scale. Not the maximum: one generated file with a
+ * quarter of a million changed lines squashes every other file into the same
+ * middle colour. The 98th percentile keeps the ramp spread across the files
+ * anyone is actually looking at, and the legend says "or more".
+ */
+function churnScale(d: Dataset): number {
+  const churn: number[] = [];
   for (let f = 0; f < d.fileCount; f++) {
     const c = d.files.adds[f]! + d.files.dels[f]!;
-    if (c > max) max = c;
+    if (c > 0) churn.push(c);
   }
-  return max;
+  if (churn.length === 0) return 1;
+  churn.sort((a, b) => a - b);
+  return churn[Math.min(churn.length - 1, Math.floor(churn.length * 0.98))]!;
 }
 
 function layout(request: Extract<ToWorker, { type: 'layout' }>['request']): void {
@@ -281,7 +286,6 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
   if (msg.type === 'parse') {
     cancelled = false;
     loaded = null;
-    cochange = null;
     timeline = null;
     void parse(msg);
     return;
@@ -302,20 +306,6 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
     if (!msg.includeBots) timeline = t;
     // `times` belongs to the dataset and must not be transferred away.
     post({ type: 'timeline', timeline: { ...t, times: t.times.slice() } });
-    return;
-  }
-  if (msg.type === 'cochange') {
-    if (!loaded) return;
-    cochange ??= buildCoChange(loaded.dataset, msg.limit);
-    post({
-      type: 'cochange',
-      cochange: {
-        pairs: cochange.pairs.slice(),
-        counts: cochange.counts.slice(),
-        commitsConsidered: cochange.commitsConsidered,
-        maxCount: cochange.maxCount,
-      },
-    });
     return;
   }
   if (msg.type === 'meaning') {

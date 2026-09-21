@@ -25,11 +25,8 @@ export function MapView({ summary }: { summary: Summary }) {
 
   const theme = useUi((s) => s.theme);
   const mode = useMap((s) => s.mode);
-  const weighting = useMap((s) => s.weighting);
   const root = useMap((s) => s.root);
   const tables = useMap((s) => s.tables);
-  const showArcs = useMap((s) => s.showArcs);
-  const cochange = useMap((s) => s.cochange);
   const hits = useMeaning((s) => s.hits);
   const layout = useMap((s) => s.layout);
   const layoutVersion = layout?.id ?? 0;
@@ -93,7 +90,6 @@ export function MapView({ summary }: { summary: Summary }) {
         width: w,
         height: h,
         root: useMap.getState().root,
-        weighting: useMap.getState().weighting,
       },
     });
   }, []);
@@ -102,12 +98,6 @@ export function MapView({ summary }: { summary: Summary }) {
   useEffect(() => {
     const w = atlasWorker();
     const onMessage = (e: MessageEvent<FromWorker>) => {
-      if (e.data.type === 'cochange') {
-        controllerRef.current.cochange = e.data.cochange;
-        useMap.getState().setCoChange(e.data.cochange);
-        controllerRef.current.invalidate();
-        return;
-      }
       if (e.data.type !== 'layout') return;
       const layout: LayoutPayload = e.data.layout;
       if (layout.id !== reqId.current) return; // a newer request is already out
@@ -183,7 +173,7 @@ export function MapView({ summary }: { summary: Summary }) {
   // A new root or weighting needs a fresh layout at the current commit.
   useEffect(() => {
     request(clock.commit);
-  }, [root, weighting, request]);
+  }, [root, request]);
 
   /*
    * Whenever the clock settles somewhere new — the timeline finishing, a step,
@@ -225,16 +215,11 @@ export function MapView({ summary }: { summary: Summary }) {
     c.setDimmed(mask);
   }, [hits, layoutVersion]);
 
-  // Arcs and selection drive the overlay, not the layout.
+  // Selection drives the overlay, not the layout.
   useEffect(() => {
-    const c = controllerRef.current;
-    c.showArcs = showArcs;
-    c.selectedFile = selectedFile;
-    c.invalidate();
-    if ((showArcs || selectedFile >= 0) && !c.cochange) {
-      atlasWorker().postMessage({ type: 'cochange', limit: 400 });
-    }
-  }, [showArcs, selectedFile]);
+    controllerRef.current.selectedFile = selectedFile;
+    controllerRef.current.invalidate();
+  }, [selectedFile]);
 
   // ---- pointer ----
   const onMove = useCallback((e: React.PointerEvent) => {
@@ -266,13 +251,6 @@ export function MapView({ summary }: { summary: Summary }) {
       {tables && pal && <Ticker tables={tables} pal={pal} />}
       {tooltip && pal && <Tooltip data={tooltip} />}
       <div className="map-notes">
-        {showArcs && cochange && (
-          <p className="map-note tiny">
-            Arcs join files changed in the same commit — thicker means more often. From{' '}
-            {cochange.commitsConsidered.toLocaleString()} commits that touched between 2 and 20
-            files; the strongest {Math.min(45, cochange.counts.length)} pairs are drawn.
-          </p>
-        )}
         {layout && layout.hiddenCount > 0 && (
           <p className="map-note tiny">
             {layout.hiddenCount.toLocaleString()} file

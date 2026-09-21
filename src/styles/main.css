@@ -37,7 +37,17 @@
 .crumb:disabled { color: var(--text); cursor: default; }
 .crumb-sep { color: var(--text-faint); font-size: 13px; }
 
-.seg-sm .seg-btn { font-size: 12px; padding: 3px 12px; }
+/* The colour picker sits with its own label, so the pair reads as a sentence. */
+.map-bar-right { display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
+.colour-by {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
 
 /* ---- body: map plus panel ---- */
 .main-body {
@@ -268,7 +278,6 @@
 .ticker-who { color: var(--text-muted); white-space: nowrap; }
 .ticker-what { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.arc-toggle.is-on { background: var(--accent-soft); color: var(--text); }
 
 @media (max-width: 1320px) {
   .dock-controls { gap: var(--s-4); padding-inline: var(--s-4); }

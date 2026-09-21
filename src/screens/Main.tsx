@@ -39,11 +39,9 @@ export function Main() {
   const summary = useAtlas((s) => s.summary)!;
   const reset = useAtlas((s) => s.reset);
   const theme = useUi((s) => s.theme);
-  const { mode, setMode, root, setRoot, weighting, setWeighting, tables } = useMap();
+  const { mode, setMode, root, setRoot, tables } = useMap();
   const [pal, setPal] = useState<Palette | null>(null);
   const [timeline, setTimelineState] = useState<TimelinePayload | null>(null);
-  const showArcs = useMap((s) => s.showArcs);
-  const setShowArcs = useMap((s) => s.setShowArcs);
   const selectedFile = useMap((s) => s.selectedFile);
   const searchOpen = useMeaning((s) => s.searchOpen);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -175,10 +173,6 @@ export function Main() {
           notifyClock();
           return;
         }
-        case 'c':
-        case 'C':
-          useMap.getState().setShowArcs(!useMap.getState().showArcs);
-          return;
         case 'Escape': {
           if (helpOpen) {
             setHelpOpen(false);
@@ -229,7 +223,6 @@ export function Main() {
         </div>
 
         <div className="top-right">
-          <ColorModes mode={mode} onChange={setMode} />
           <button
             type="button"
             className="btn btn-ghost"
@@ -258,6 +251,10 @@ export function Main() {
       <div className="map-bar">
         <Breadcrumb repo={summary.repo} root={root} onNavigate={setRoot} />
         <div className="map-bar-right">
+          <span className="colour-by label" id="colour-by-label">
+            Colour by
+          </span>
+          <ColorModes mode={mode} onChange={setMode} />
           <button
             type="button"
             className="btn btn-ghost"
@@ -266,34 +263,6 @@ export function Main() {
           >
             Search <kbd className="kbd">/</kbd>
           </button>
-          <button
-            type="button"
-            className={`btn btn-ghost arc-toggle ${showArcs ? 'is-on' : ''}`}
-            aria-pressed={showArcs}
-            onClick={() => setShowArcs(!showArcs)}
-            title="Draw arcs between files that change in the same commit — c"
-          >
-            Connections
-          </button>
-          <div className="seg seg-sm" role="radiogroup" aria-label="Cell size weighting">
-            {(['balanced', 'linear'] as const).map((w) => (
-              <button
-                key={w}
-                type="button"
-                role="radio"
-                aria-checked={weighting === w}
-                className={`seg-btn ${weighting === w ? 'is-on' : ''}`}
-                onClick={() => setWeighting(w)}
-                title={
-                  w === 'balanced'
-                    ? 'Areas use size^0.6, so small files stay visible'
-                    : 'Areas are proportional to the estimated line count'
-                }
-              >
-                {w === 'balanced' ? 'Balanced' : 'Linear'}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 

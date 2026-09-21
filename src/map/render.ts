@@ -1,4 +1,4 @@
-import type { CoChangePayload, LayoutPayload, Tables } from '../lib/protocol';
+import type { LayoutPayload, Tables } from '../lib/protocol';
 import {
   activityT,
   ageT,
@@ -67,8 +67,6 @@ export interface Frame {
 /** The smallest a cell can get before it is folded into its parent's fill. */
 const MIN_CELL = 0.75;
 const MAX_GLOWS = 200;
-/** Arcs are a garnish; past this many they stop meaning anything. */
-const MAX_ARCS = 45;
 const LABEL_FOLDER_MIN_W = 64;
 const LABEL_FILE_MIN_W = 46;
 const LABEL_FILE_MIN_H = 18;
@@ -349,10 +347,6 @@ export class MapRenderer {
       selected: number;
       hoverFolder: number;
       glows: boolean;
-      /** Pairs of files that tend to change in the same commit. */
-      cochange: CoChangePayload | null;
-      /** Draw only arcs touching this file id, or -1 for the strongest overall. */
-      arcsFor: number;
     },
   ): void {
     const { pal, camera } = opts;
@@ -360,9 +354,6 @@ export class MapRenderer {
     ctx.clearRect(0, 0, opts.width, opts.height);
 
     if (opts.glows) this.drawGlows(ctx, l, pal, camera, opts.width, opts.height);
-    if (opts.cochange) {
-      this.drawArcs(ctx, l, opts.cochange, opts.arcsFor, pal, camera, opts.width, opts.height);
-    }
 
     const r = l.rects;
     if (opts.hoverFolder >= 0) {
@@ -407,85 +398,6 @@ export class MapRenderer {
       ctx.strokeRect(x - 3.5, y - 3.5, w + 7, h + 7);
     }
   }
-
-  /**
-   * Arcs between files that change together. The centre of each cell is the
-   * anchor and the curve bows away from the midpoint, so two arcs between the
-   * same neighbourhood stay distinguishable.
-   */
-  private drawArcs(
-    ctx: CanvasRenderingContext2D,
-    l: LayoutPayload,
-    co: CoChangePayload,
-    only: number,
-    pal: Palette,
-    camera: Camera,
-    width: number,
-    height: number,
-  ): void {
-    const n = l.fileIds.length;
-    if (this.arcSlot.length < n) this.arcSlot = new Int32Array(Math.max(n, 1024));
-    // fileId -> cell index, rebuilt per draw because the layout changes.
-    const index = this.arcIndex;
-    index.clear();
-    for (let i = 0; i < n; i++) index.set(l.fileIds[i]!, i);
-
-    const { k, tx, ty } = camera;
-    const centreX = (i: number) => ((l.rects[i * 4]! + l.rects[i * 4 + 2]!) / 2) * k + tx;
-    const centreY = (i: number) => ((l.rects[i * 4 + 1]! + l.rects[i * 4 + 3]!) / 2) * k + ty;
-
-    ctx.lineCap = 'round';
-    let drawn = 0;
-    for (let p = 0; p < co.counts.length && drawn < MAX_ARCS; p++) {
-      const a = co.pairs[p * 2]!;
-      const b = co.pairs[p * 2 + 1]!;
-      if (only >= 0 && a !== only && b !== only) continue;
-      const ia = index.get(a);
-      const ib = index.get(b);
-      if (ia === undefined || ib === undefined) continue;
-
-      const x1 = centreX(ia);
-      const y1 = centreY(ia);
-      const x2 = centreX(ib);
-      const y2 = centreY(ib);
-      if (x1 < 0 && x2 < 0) continue;
-      if (x1 > width && x2 > width) continue;
-      if (y1 < 0 && y2 < 0) continue;
-      if (y1 > height && y2 > height) continue;
-
-      const strength = co.counts[p]! / Math.max(1, co.maxCount);
-      const mx = (x1 + x2) / 2;
-      const my = (y1 + y2) / 2;
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const len = Math.hypot(dx, dy) || 1;
-      // Bow perpendicular to the chord, by a fifth of its length.
-      const cx = mx - (dy / len) * len * 0.2;
-      const cy = my + (dx / len) * len * 0.2;
-
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.quadraticCurveTo(cx, cy, x2, y2);
-      ctx.strokeStyle = pal.arc;
-      // Weak pairs stay whisper-faint so the strong ones carry the picture.
-      ctx.globalAlpha = 0.1 + strength * strength * 0.7;
-      ctx.lineWidth = 0.6 + strength * 2.6;
-      ctx.stroke();
-
-      // Endpoint dots, so a connection is readable even where it leaves frame.
-      ctx.globalAlpha = 0.25 + strength * 0.6;
-      ctx.fillStyle = pal.arc;
-      ctx.beginPath();
-      ctx.arc(x1, y1, 1.8, 0, Math.PI * 2);
-      ctx.arc(x2, y2, 1.8, 0, Math.PI * 2);
-      ctx.fill();
-      drawn++;
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  private arcIndex = new Map<number, number>();
-  private arcSlot = new Int32Array(0);
 
   private drawGlows(
     ctx: CanvasRenderingContext2D,

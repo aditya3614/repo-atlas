@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { ChunkSplitter, LineParser } from './parse';
 import { ModelBuilder, type Dataset } from './model';
 import { buildTimeline, commitAt, SERIES } from './timeline';
-import { buildCoChange } from './cochange';
 
 function build(text: string): Dataset {
   const b = new ModelBuilder();
@@ -102,45 +101,3 @@ describe('playback timeline', () => {
   });
 });
 
-describe('co-change', () => {
-  const pairText =
-    // a.ts and b.ts always move together; c.ts moves alone.
-    Array.from({ length: 12 }, (_, k) =>
-      `@@@\nh${k}\nAda\nada@x.c\n2021-01-${String(k + 1).padStart(2, '0')}T00:00:00Z\nc\n\n` +
-      `1\t0\tsrc/a.ts\n1\t0\tsrc/b.ts\n`,
-    ).join('') +
-    Array.from({ length: 5 }, (_, k) =>
-      `@@@\nz${k}\nAda\nada@x.c\n2021-02-${String(k + 1).padStart(2, '0')}T00:00:00Z\nc\n\n1\t0\tsrc/c.ts\n`,
-    ).join('');
-
-  it('finds the pair that always changes together', () => {
-    const d = build(pairText);
-    const co = buildCoChange(d, 20);
-    expect(co.counts.length).toBeGreaterThan(0);
-    expect(co.maxCount).toBe(12);
-    const top = [co.pairs[0]!, co.pairs[1]!].map((f) => d.paths[d.files.firstPath[f]!]!).sort();
-    expect(top).toEqual(['src/a.ts', 'src/b.ts']);
-    expect(co.commitsConsidered).toBe(12);
-  });
-
-  it('ignores sweeping commits, which relate everything to everything', () => {
-    let wide = '@@@\nw\nAda\nada@x.c\n2021-03-01T00:00:00Z\nrefactor everything\n\n';
-    for (let i = 0; i < 40; i++) wide += `1\t1\tsrc/w${i}.ts\n`;
-    const co = buildCoChange(build(pairText + wide), 50);
-    // The 40-file commit is over the fan-out limit, so it contributes nothing.
-    expect(co.commitsConsidered).toBe(12);
-  });
-
-  it('returns nothing for a history where files never share a commit', () => {
-    const co = buildCoChange(
-      build(
-        Array.from({ length: 6 }, (_, k) =>
-          `@@@\nh${k}\nAda\nada@x.c\n2021-01-0${k + 1}T00:00:00Z\nc\n\n1\t0\tsrc/${k}.ts\n`,
-        ).join(''),
-      ),
-      10,
-    );
-    expect(co.counts.length).toBe(0);
-    expect(co.maxCount).toBe(0);
-  });
-});

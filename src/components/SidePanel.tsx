@@ -15,7 +15,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'story', label: 'Story' },
   { id: 'hotspots', label: 'Hotspots' },
   { id: 'selection', label: 'Selection' },
-  { id: 'about', label: 'History' },
+  { id: 'about', label: 'Summary' },
 ];
 
 export function SidePanel({ summary, tables }: { summary: Summary; tables: Tables | null }) {

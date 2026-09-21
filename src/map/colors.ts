@@ -12,20 +12,28 @@ import { interpolateRgb } from 'd3-interpolate';
 export const MODES = ['activity', 'author', 'age', 'churn', 'type'] as const;
 export type Mode = (typeof MODES)[number];
 
+/*
+ * Labels say what the colour means, not what the measure is called. "Churn" and
+ * "activity" are words this project's authors use; nobody arriving at the map
+ * for the first time knows them.
+ */
 export const MODE_LABELS: Record<Mode, string> = {
-  activity: 'Activity',
-  author: 'Author',
-  age: 'Age',
-  churn: 'Churn',
-  type: 'Type',
+  activity: 'Recently changed',
+  author: 'Who wrote it',
+  age: 'How old',
+  churn: 'How often rewritten',
+  type: 'Kind of file',
 };
 
+/** One sentence, in the legend, saying what you are looking at. */
 export const MODE_HINTS: Record<Mode, string> = {
-  activity: 'Recently changed files stand out; the colour decays as they go quiet.',
-  author: 'Who has added the most lines to each file.',
-  age: 'When the file first appeared in the history.',
-  churn: 'Lines added plus deleted over the file’s whole life.',
-  type: 'Code, tests, docs, config or assets, from the file’s extension.',
+  activity:
+    'How recently each file changed, as of the date on the playhead. Files touched just now are brightest and fade as they go quiet.',
+  author: 'Whoever has added the most lines to each file over its whole life.',
+  age: 'When each file first appeared in the project.',
+  churn:
+    'How much a file has been rewritten: every line added or removed across its whole life, added up.',
+  type: 'What kind of file it is, worked out from its name and extension.',
 };
 
 const LUT_N = 64;
@@ -166,7 +174,8 @@ export function ageT(firstTime: number, from: number, to: number): number {
 
 export function churnT(churn: number, maxChurn: number): number {
   if (maxChurn <= 0) return 0;
-  return Math.log1p(churn) / Math.log1p(maxChurn);
+  const t = Math.log1p(churn) / Math.log1p(maxChurn);
+  return t > 1 ? 1 : t;
 }
 
 export function lutIndex(t: number): number {

@@ -22,16 +22,10 @@ const HISTORY =
   commit(1, ['10\t0\tsrc/a.ts', '10\t0\tsrc/b.ts', '10\t0\tsrc/deep/c.ts', '10\t0\tdocs/readme.md']) +
   commit(2, ['400\t0\tsrc/b.ts']);
 
-function layoutAt(d: Dataset, k: number, root = '', weighting: 'balanced' | 'linear' = 'balanced') {
+function layoutAt(d: Dataset, k: number, root = '') {
   const cp = new Checkpoints(d);
   const index = new FileIndex(d);
-  return computeLayout(d, index, cp.stateAt(k), {
-    commit: k,
-    width: 600,
-    height: 400,
-    root,
-    weighting,
-  });
+  return computeLayout(d, index, cp.stateAt(k), { commit: k, width: 600, height: 400, root });
 }
 
 describe('treemap layout', () => {
@@ -81,19 +75,6 @@ describe('treemap layout', () => {
     // The whole canvas now belongs to src, and aliveCount still counts the repo.
     expect(l.aliveCount).toBe(4);
     expect(l.fileIds.length).toBe(3);
-  });
-
-  it('balanced weighting compresses the gap that linear exaggerates', () => {
-    const area = (l: ReturnType<typeof layoutAt>, path: string) => {
-      const i = Array.from(l.pathIds).findIndex((p) => d.paths[p] === path);
-      return (l.rects[i * 4 + 2]! - l.rects[i * 4]!) * (l.rects[i * 4 + 3]! - l.rects[i * 4 + 1]!);
-    };
-    const linear = layoutAt(d, 1, '', 'linear');
-    const balanced = layoutAt(d, 1, '', 'balanced');
-    const ratio = (l: ReturnType<typeof layoutAt>) => area(l, 'src/b.ts') / area(l, 'src/a.ts');
-    expect(ratio(linear)).toBeGreaterThan(ratio(balanced));
-    // Size order still holds: the big file is still the big cell.
-    expect(ratio(balanced)).toBeGreaterThan(1);
   });
 
   it('reports folder regions with full paths', () => {

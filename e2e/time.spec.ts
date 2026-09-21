@@ -116,25 +116,3 @@ test('quiet periods can be skipped or not', async ({ page }) => {
   expect(await commitIndex(page)).toBe(before);
 });
 
-test('connections draw arcs between files that change together', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await loadDemo(page);
-
-  const before = await page.locator('.map-overlay').screenshot();
-  await page.getByRole('button', { name: 'Connections' }).click();
-  await expect(page.getByRole('button', { name: 'Connections' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
-  await page.waitForTimeout(1200);
-  const after = await page.locator('.map-overlay').screenshot();
-  expect(Buffer.compare(before, after), 'arcs should change the overlay').not.toBe(0);
-  await page.screenshot({ path: 'shots/arcs-night-1440x900.png' });
-
-  // c is the shortcut for the same toggle.
-  await page.keyboard.press('c');
-  await expect(page.getByRole('button', { name: 'Connections' })).toHaveAttribute(
-    'aria-pressed',
-    'false',
-  );
-});

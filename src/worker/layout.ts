@@ -7,12 +7,10 @@ import type { FileIndex } from './fileIndex';
  * Treemap layout for the files alive at one commit.
  *
  * Sibling order is by name, never by size, so a cell does not jump across the
- * map when a file grows. Weights use size^0.6 by default: raw line counts make
- * one huge generated file swallow the picture, and the exponent keeps small
- * files legible without lying about the order.
+ * map when a file grows. Areas use size^0.6: raw line counts let one generated
+ * file swallow the picture, and the exponent keeps small files legible while
+ * leaving the order of sizes truthful.
  */
-
-export type Weighting = 'balanced' | 'linear';
 
 export interface LayoutRequest {
   commit: number;
@@ -20,7 +18,6 @@ export interface LayoutRequest {
   height: number;
   /** Folder to draw, '' for the whole repository. */
   root: string;
-  weighting: Weighting;
 }
 
 /** Everything the renderer needs for one frame, as transferable arrays. */
@@ -60,6 +57,8 @@ interface Node {
 }
 
 const LABEL_GUTTER = 15;
+/** Compresses extremes without reordering them; see the note above. */
+const AREA_EXPONENT = 0.6;
 
 function makeNode(name: string): Node {
   return { name, file: -1, value: 0, children: new Map() };
@@ -111,11 +110,7 @@ export function computeLayout(
     const leafName = rest.slice(start);
     // A weight of zero would make the cell vanish; an empty file still exists.
     const size = Math.max(1, state.size[f]!);
-    const leaf: Node = {
-      name: leafName,
-      file: f,
-      value: req.weighting === 'linear' ? size : Math.pow(size, 0.6),
-    };
+    const leaf: Node = { name: leafName, file: f, value: Math.pow(size, AREA_EXPONENT) };
     node.children!.set(leafName, leaf);
   }
 

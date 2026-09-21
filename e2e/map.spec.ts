@@ -69,18 +69,20 @@ test('colour modes switch by keyboard and each has a legend', async ({ page }) =
   await page.setViewportSize({ width: 1440, height: 900 });
   await loadDemo(page);
 
-  for (const [key, name, legend] of [
-    ['2', 'Author', 'added the most lines'],
-    ['3', 'Age', 'first appeared'],
-    ['4', 'Churn', 'added plus deleted'],
-    ['5', 'Type', 'extension'],
-    ['1', 'Activity', 'decays'],
+  for (const [key, name, legend, slug] of [
+    ['2', 'Who wrote it', 'added the most lines', 'author'],
+    ['3', 'How old', 'first appeared', 'age'],
+    ['4', 'How often rewritten', 'added or removed', 'churn'],
+    ['5', 'Kind of file', 'name and extension', 'type'],
+    ['1', 'Recently changed', 'fade as they go quiet', 'activity'],
   ] as const) {
     await page.keyboard.press(key);
     await expect(page.getByRole('radio', { name })).toHaveAttribute('aria-checked', 'true');
+    // The legend names the mode and explains it in a sentence.
+    await expect(page.locator('.legend-title')).toHaveText(name);
     await expect(page.locator('.legend-hint')).toContainText(legend);
     await page.waitForTimeout(220);
-    await page.screenshot({ path: `shots/map-mode-${name.toLowerCase()}-1440x900.png` });
+    await page.screenshot({ path: `shots/map-mode-${slug}-1440x900.png` });
   }
 });
 

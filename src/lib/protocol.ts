@@ -49,8 +49,6 @@ export interface Progress {
   totalBytes: number;
 }
 
-export type Weighting = 'balanced' | 'linear';
-
 export interface LayoutRequest {
   /** Echoed back, so a stale reply can be dropped. */
   id: number;
@@ -58,7 +56,6 @@ export interface LayoutRequest {
   width: number;
   height: number;
   root: string;
-  weighting: Weighting;
 }
 
 /** One frame's worth of geometry and per-cell attributes. */
@@ -98,7 +95,7 @@ export interface Tables {
   /** Palette slot per author id: 0-9 for the ten biggest, 10 for the rest. */
   authorSlot: Uint8Array;
   binaryWeight: number;
-  /** Largest lifetime churn in the history, so the churn ramp is stable. */
+  /** Top of the churn ramp: the 98th percentile, not the outlier maximum. */
   maxChurn: number;
 }
 
@@ -115,13 +112,6 @@ export interface TimelinePayload {
   series: Uint32Array;
   seriesAuthors: Int32Array;
   peakWeek: number;
-}
-
-export interface CoChangePayload {
-  pairs: Uint32Array;
-  counts: Uint32Array;
-  commitsConsidered: number;
-  maxCount: number;
 }
 
 /** Commit subjects for the ticker, fetched a window at a time. */
@@ -205,7 +195,6 @@ export type ToWorker =
   | { type: 'layout'; request: LayoutRequest }
   | { type: 'sparkline'; fileId: number; samples: number }
   | { type: 'timeline'; includeBots: boolean }
-  | { type: 'cochange'; limit: number }
   | { type: 'subjects'; from: number; count: number }
   | { type: 'meaning'; commit: number }
   | { type: 'search'; query: string; commit: number; limit: number }
@@ -219,7 +208,6 @@ export type FromWorker =
   | { type: 'layout'; layout: LayoutPayload }
   | { type: 'sparkline'; sparkline: Sparkline }
   | { type: 'timeline'; timeline: TimelinePayload }
-  | { type: 'cochange'; cochange: CoChangePayload }
   | { type: 'subjects'; window: SubjectWindow }
   | { type: 'meaning'; meaning: MeaningPayload }
   | { type: 'search'; query: string; hits: SearchHit[] }

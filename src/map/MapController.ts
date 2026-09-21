@@ -2,7 +2,6 @@ import type { LayoutPayload, Tables } from '../lib/protocol';
 import { HitGrid, toLayout } from './hit';
 import { MapRenderer, IDENTITY, cameraForRect, lerpCamera, type Camera, type Frame } from './render';
 import { advance, clock, notifyClock } from './clock';
-import type { CoChangePayload } from '../lib/protocol';
 import type { Mode, Palette } from './colors';
 
 /**
@@ -67,8 +66,6 @@ export class MapController {
   private requestedCommit = -1;
   private lastNotify = 0;
 
-  cochange: CoChangePayload | null = null;
-  showArcs = false;
 
   private width = 1;
   private height = 1;
@@ -306,8 +303,6 @@ export class MapController {
         selected: this.selected,
         hoverFolder: this.hoverFolder,
         glows: this.mode === 'activity',
-        cochange: this.showArcs || this.selectedFile >= 0 ? this.cochange : null,
-        arcsFor: this.showArcs ? -1 : this.selectedFile,
       });
       this.overlayDirty = false;
     }
