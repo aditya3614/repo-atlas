@@ -581,9 +581,28 @@ through instead, which is why the "too small to draw" note exists.
 
 **Readable labels.** A file's label sits directly on its cell, and that cell's
 colour is data — it could be near-black or bright yellow. A single grey cannot
-work on both. Each cell therefore chooses dark or light ink based on its own
-brightness, and a test checks both inks against all 27 possible cell colours in
-both themes.
+work on both, so each cell gets whichever of two inks (near-black or near-white)
+has the higher contrast against its own colour.
+
+Three details make that reliable rather than approximate:
+
+- **Every colour format is understood.** The colour ramps are interpolated by
+  d3, which hands back `rgb(r, g, b)` strings, while the design tokens are hex.
+  The code that reads colours handles both and *throws* on anything it cannot
+  read. An earlier version silently treated an unreadable colour as mid-grey,
+  which gave every interpolated shade white text — including the brightest
+  yellow on the map.
+- **The ink is picked by measured contrast**, not by a brightness cut-off, so it
+  is always the better of the two.
+- **There is a band of mid-tones where neither ink reaches the 4.5:1 minimum.**
+  A smooth ramp has to cross it, so any of the 64 shades that lands inside it
+  borrows its nearest readable neighbour. The band is only a few steps wide, so
+  the ramp still looks continuous, but no cell can end up with a label that
+  cannot be read.
+
+A test builds the palette the same way the renderer does, from the real
+stylesheet, and checks the ink on every one of the several hundred shades in both
+themes. It also fails if the original bug is put back.
 
 **Hit testing** uses a grid of buckets, so finding what is under the pointer
 checks a handful of rectangles rather than 20,000. It also allows a three-pixel
